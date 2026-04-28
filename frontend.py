@@ -10,10 +10,10 @@ st.set_page_config(page_title="AutoPatch AI", page_icon="🩹", layout="wide")
 st.markdown(
     """
     <style>
-    .main-header { font-size: 2.4rem; font-weight: 700; margin-bottom: 0; }
-    .sub-header  { color: #888; font-size: 1.1rem; margin-top: 0; }
-    .diff-add    { color: #22c55e; }
-    .diff-remove { color: #ef4444; }
+        .main-header { font-size: 2.4rem; font-weight: 700; margin-bottom: 0; }
+        .sub-header  { color: #888; font-size: 1.1rem; margin-top: 0; }
+        .diff-add    { color: #22c55e; }
+        .diff-remove { color: #ef4444; }
     </style>
     """,
     unsafe_allow_html=True,

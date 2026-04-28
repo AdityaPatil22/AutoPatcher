@@ -3,6 +3,16 @@ from pathlib import Path
 
 from app.config import SAMPLE_REPO_PATH
 
+SUPPORTED_EXTENSIONS = {
+    ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".rs",
+    ".c", ".cpp", ".h", ".hpp", ".cs", ".swift", ".kt", ".vue", ".svelte",
+}
+
+SKIP_DIRS = {
+    "node_modules", ".next", "__pycache__", ".git", "dist", "build",
+    ".venv", "venv", "env", ".tox", ".mypy_cache", ".pytest_cache",
+    "coverage", ".nuxt", ".output", "out", "target", "bin", "obj",
+}
 
 def search_files(query: str, file_hint: str | None = None) -> list[dict]:
     """
@@ -12,9 +22,12 @@ def search_files(query: str, file_hint: str | None = None) -> list[dict]:
     keywords = _extract_keywords(query)
     results = []
 
-    for root, _, files in os.walk(SAMPLE_REPO_PATH):
+    for root, dirs, files in os.walk(SAMPLE_REPO_PATH):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+
         for filename in files:
-            if not filename.endswith(".py"):
+            ext = Path(filename).suffix.lower()
+            if ext not in SUPPORTED_EXTENSIONS:
                 continue
 
             filepath = Path(root) / filename

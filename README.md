@@ -91,11 +91,6 @@ Backend/
 │   │   └── llm.py           # OpenAI / Gemini caller
 │   └── utils/
 │       └── diff.py          # Unified diff generator
-├── sample_repo/             # Dummy codebase with realistic bugs
-│   ├── user_service.py
-│   ├── payment_processor.py
-│   ├── inventory.py
-│   └── auth.py
 ├── requirements.txt
 └── .env.example
 ```
@@ -104,13 +99,14 @@ Backend/
 
 Copy `.env.example` to `.env` and set your values:
 
-| Variable          | Default        | Description                        |
-|-------------------|----------------|------------------------------------|
-| `LLM_PROVIDER`    | `openai`       | `openai` or `gemini`               |
-| `OPENAI_API_KEY`  | —              | Your OpenAI API key                |
-| `GEMINI_API_KEY`  | —              | Your Google Gemini API key         |
-| `LLM_MODEL`       | `gpt-4o-mini`  | Model name to use                  |
-| `SAMPLE_REPO_PATH`| `./sample_repo`| Path to the target codebase        |
+| Variable           | Default                        | Description                               |
+|--------------------|--------------------------------|-------------------------------------------|
+| `LLM_PROVIDER`     | `openai`                       | `openai`, `gemini`, or `local`            |
+| `OPENAI_API_KEY`   | —                              | Your OpenAI API key                       |
+| `GEMINI_API_KEY`   | —                              | Your Google Gemini API key                |
+| `LLM_MODEL`        | `gpt-4o-mini`                  | Model name to use                         |
+| `LOCAL_LLM_BASE_URL`| `http://localhost:11434/v1`   | Base URL for the local model server       |
+| `SAMPLE_REPO_PATH` | `./sample_repo`                | Path to the target codebase               |
 
 ## Example Bug Tickets to Try
 
@@ -122,26 +118,3 @@ Copy `.env.example` to `.env` and set your values:
 }
 ```
 
-**2. Negative stock allowed**
-```json
-{
-  "title": "Stock goes negative",
-  "description": "remove_stock allows removing more items than available, resulting in negative stock counts"
-}
-```
-
-**3. Token never expires**
-```json
-{
-  "title": "Session tokens never expire",
-  "description": "validate_token does not check the expires_at field, so expired tokens are still considered valid"
-}
-```
-
-**4. MD5 used for passwords**
-```json
-{
-  "title": "Weak password hashing",
-  "description": "hash_password uses MD5 which is insecure. Should use bcrypt or similar"
-}
-```
