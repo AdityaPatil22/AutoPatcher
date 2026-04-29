@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.fix import router as fix_router
+from app.routes.index import router as index_router
 
 app = FastAPI(
     title="AutoPatch AI",
@@ -17,6 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(fix_router, prefix="/api")
+app.include_router(index_router, prefix="/api")
 
 
 @app.get("/health")

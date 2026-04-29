@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from app.config import SAMPLE_REPO_PATH
+from app.config import SAMPLE_REPO_PATH, SEARCH_MODE
 
 SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".rs",
@@ -14,11 +14,8 @@ SKIP_DIRS = {
     "coverage", ".nuxt", ".output", "out", "target", "bin", "obj",
 }
 
+
 def search_files(query: str, file_hint: str | None = None) -> list[dict]:
-    """
-    Search sample_repo for files relevant to the bug description.
-    Uses keyword matching — intentionally simple for MVP.
-    """
     keywords = _extract_keywords(query)
     results = []
 
@@ -50,19 +47,111 @@ def search_files(query: str, file_hint: str | None = None) -> list[dict]:
     return results
 
 
+def search_files_semantic(query: str, file_hint: str | None = None) -> list[dict]:
+    from app.services.indexer import search_semantic
+
+    hits = search_semantic(query, top_k=10)
+    if not hits:
+        return []
+
+    seen = {}
+    for hit in hits:
+        fp = hit["filepath"]
+        if file_hint and file_hint.lower() not in hit["filename"].lower():
+            continue
+        if fp not in seen or hit["distance"] < seen[fp]["distance"]:
+            seen[fp] = hit
+
+    results = []
+    for fp, hit in seen.items():
+        try:
+            full_content = Path(fp).read_text(encoding="utf-8")
+        except (FileNotFoundError, UnicodeDecodeError):
+            continue
+
+        score = max(0, 2 - hit["distance"])
+        results.append({
+            "path": fp,
+            "filename": hit["filename"],
+            "content": full_content,
+            "score": score,
+        })
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results
+
+
+def search_files_hybrid(query: str, file_hint: str | None = None) -> list[dict]:
+    keyword_results = search_files(query, file_hint)
+    semantic_results = search_files_semantic(query, file_hint)
+
+    if not semantic_results:
+        return keyword_results
+    if not keyword_results:
+        return semantic_results
+
+    max_kw = max(r["score"] for r in keyword_results)
+    kw_scores = {}
+    for r in keyword_results:
+        kw_scores[r["path"]] = {
+            **r,
+            "norm_score": r["score"] / max_kw if max_kw > 0 else 0,
+        }
+
+    max_sem = max(r["score"] for r in semantic_results)
+    sem_scores = {}
+    for r in semantic_results:
+        sem_scores[r["path"]] = {
+            **r,
+            "norm_score": r["score"] / max_sem if max_sem > 0 else 0,
+        }
+
+    all_paths = set(kw_scores.keys()) | set(sem_scores.keys())
+    merged = []
+    for path in all_paths:
+        kw = kw_scores.get(path, {}).get("norm_score", 0)
+        sem = sem_scores.get(path, {}).get("norm_score", 0)
+        combined_score = 0.4 * kw + 0.6 * sem
+
+        base = sem_scores.get(path) or kw_scores.get(path)
+        merged.append({
+            "path": base["path"],
+            "filename": base["filename"],
+            "content": base["content"],
+            "score": combined_score,
+        })
+
+    merged.sort(key=lambda x: x["score"], reverse=True)
+    return merged
+
+
 def get_best_context(query: str, file_hint: str | None = None) -> dict:
-    """Return the single most relevant file for the given bug description."""
-    results = search_files(query, file_hint)
-    if not results:
-        all_files = search_files(query)
-        if all_files:
-            return all_files[0]
-        return {"path": "", "filename": "", "content": "No relevant code found.", "score": 0}
-    return results[0]
+    if SEARCH_MODE == "semantic":
+        results = search_files_semantic(query, file_hint)
+    elif SEARCH_MODE == "hybrid":
+        results = search_files_hybrid(query, file_hint)
+    else:
+        results = search_files(query, file_hint)
+
+    if not results and file_hint:
+        if SEARCH_MODE == "semantic":
+            results = search_files_semantic(query)
+        elif SEARCH_MODE == "hybrid":
+            results = search_files_hybrid(query)
+        else:
+            results = search_files(query)
+
+    if not results and SEARCH_MODE != "keyword":
+        results = search_files(query, file_hint)
+        if not results and file_hint:
+            results = search_files(query)
+
+    if results:
+        return results[0]
+    return {"path": "", "filename": "", "content": "No relevant code found.", "score": 0}
 
 
 def _extract_keywords(text: str) -> list[str]:
-    """Pull meaningful keywords from the query, filtering noise."""
     stop_words = {
         "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
         "have", "has", "had", "do", "does", "did", "will", "would", "could",
@@ -79,7 +168,6 @@ def _extract_keywords(text: str) -> list[str]:
 
 
 def _score_relevance(content: str, keywords: list[str]) -> int:
-    """Score how relevant a file's content is based on keyword matches."""
     content_lower = content.lower()
     score = 0
     for keyword in keywords:

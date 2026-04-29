@@ -16,6 +16,9 @@ build/
 .vscode/
 .idea/
 
+# ChromaDB index
+.chroma_index/
+
 # OS
 .DS_Store
 Thumbs.db

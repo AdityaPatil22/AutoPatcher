@@ -3,9 +3,9 @@ import json
 import requests
 import streamlit as st
 
-API_URL = "http://localhost:8000/api/generate-fix"
+API_URL = "http://localhost:8000/api"
 
-st.set_page_config(page_title="AutoPatch AI", page_icon="🩹", layout="wide")
+st.set_page_config(page_title="AutoPatch AI", page_icon="\U0001fa79", layout="wide")
 
 st.markdown(
     """
@@ -19,9 +19,49 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+with st.sidebar:
+    st.header("Code Search Index")
+
+    try:
+        status_resp = requests.get(f"{API_URL}/index/status", timeout=5)
+        if status_resp.status_code == 200:
+            stats = status_resp.json()
+            if stats["indexed"]:
+                st.success(f"Indexed: {stats['total_chunks']} chunks")
+            else:
+                st.warning("Repository not indexed yet")
+        else:
+            stats = {"indexed": False}
+    except requests.ConnectionError:
+        st.error("Backend not connected")
+        stats = {"indexed": False}
+
+    if st.button("Index Repository", use_container_width=True):
+        with st.spinner("Indexing repository..."):
+            try:
+                resp = requests.post(f"{API_URL}/index", timeout=300)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    st.success(
+                        f"Indexed {data['files_indexed']} files "
+                        f"({data['chunks_created']} chunks)"
+                    )
+                else:
+                    st.error(f"Indexing failed: {resp.text}")
+            except requests.ConnectionError:
+                st.error("Cannot connect to backend")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+    st.divider()
+    st.caption(
+        "Index your repository to enable semantic search. "
+        "Re-index after code changes."
+    )
+
 st.markdown('<p class="main-header">AutoPatch AI</p>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="sub-header">Paste a bug → get a patch. Powered by LLM.</p>',
+    '<p class="sub-header">Paste a bug \u2192 get a patch. Powered by LLM.</p>',
     unsafe_allow_html=True,
 )
 
@@ -60,7 +100,7 @@ with col_output:
 
             with st.spinner("Fetching context & calling LLM..."):
                 try:
-                    resp = requests.post(API_URL, json=payload, timeout=60)
+                    resp = requests.post(f"{API_URL}/generate-fix", json=payload, timeout=60)
 
                     if resp.status_code == 200:
                         data = resp.json()

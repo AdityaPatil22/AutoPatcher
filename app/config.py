@@ -16,3 +16,9 @@ LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:1143
 SAMPLE_REPO_PATH: Path = Path(
     os.getenv("SAMPLE_REPO_PATH", str(Path(__file__).resolve().parent.parent / "sample_repo"))
 )
+
+SEARCH_MODE: str = os.getenv("SEARCH_MODE", "hybrid")
+
+CHROMA_PERSIST_DIR: Path = Path(
+    os.getenv("CHROMA_PERSIST_DIR", str(Path(__file__).resolve().parent.parent / ".chroma_index"))
+)
