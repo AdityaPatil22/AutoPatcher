@@ -50,6 +50,7 @@ def _call_local(messages: list[dict]) -> str:
         model=LLM_MODEL,
         messages=messages,
         temperature=0.2,
+        max_tokens=4096,
     )
     try:
         kwargs["response_format"] = {"type": "json_object"}
@@ -85,8 +86,61 @@ def _call_gemini(messages: list[dict]) -> str:
     return response.text
 
 
-def _parse_response(raw: str) -> dict:
+def _sanitize_code(code) -> str:
+    """Fix common LLM output issues in code strings."""
+    if isinstance(code, list):
+        code = "\n".join(str(item) for item in code)
+
+    if not code or not isinstance(code, str):
+        return code or ""
+
+    real_newlines = code.count("\n")
+    escaped_newlines = code.count("\\n")
+    if escaped_newlines > real_newlines and escaped_newlines > 3:
+        code = code.replace("\\n", "\n").replace("\\t", "\t")
+
+    code = re.sub(r"^(jsx|tsx|javascript|typescript|python|go|java|ruby|rust|cpp?|csharp|swift|kotlin)\n",
+                  "", code, count=1)
+
+    if code.count('\\"') > 2 and code.count('"') < code.count('\\"'):
+        code = code.replace('\\"', '"')
+
+    return code
+
+
+def _sanitize_result(result: dict) -> dict:
+    """Sanitize all code strings in the parsed LLM result."""
+    if "fixed_code" in result:
+        result["fixed_code"] = _sanitize_code(result["fixed_code"])
+
+    if "fixes" in result and isinstance(result["fixes"], list):
+        for fix in result["fixes"]:
+            if not isinstance(fix, dict):
+                continue
+            if "fixed_code" in fix:
+                fix["fixed_code"] = _sanitize_code(fix["fixed_code"])
+            for change in fix.get("changes", []):
+                if isinstance(change, dict):
+                    if "original" in change:
+                        change["original"] = _sanitize_code(change["original"])
+                    if "modified" in change:
+                        change["modified"] = _sanitize_code(change["modified"])
+
+    return result
+
+
+def _parse_response(raw) -> dict:
     """Parse the LLM response, handling common formatting issues."""
+    if raw is None:
+        raw = ""
+    if isinstance(raw, list):
+        raw = "\n".join(
+            part.get("text", str(part)) if isinstance(part, dict) else str(part)
+            for part in raw
+        )
+    if not isinstance(raw, str):
+        raw = str(raw)
+
     cleaned = raw.strip()
 
     fence_match = re.search(r"```(?:json)?\s*\n?(.*?)```", cleaned, re.DOTALL)
@@ -94,14 +148,14 @@ def _parse_response(raw: str) -> dict:
         cleaned = fence_match.group(1).strip()
 
     try:
-        return json.loads(cleaned)
+        return _sanitize_result(json.loads(cleaned))
     except json.JSONDecodeError:
         pass
 
     brace_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if brace_match:
         try:
-            return json.loads(brace_match.group())
+            return _sanitize_result(json.loads(brace_match.group()))
         except json.JSONDecodeError:
             pass
 
@@ -120,7 +174,7 @@ def _parse_response(raw: str) -> dict:
                     if other:
                         extracted[other_key] = other.group(1).encode().decode("unicode_escape")
             if "fixed_code" in extracted:
-                return extracted
+                return _sanitize_result(extracted)
 
     return {
         "fixed_code": cleaned,

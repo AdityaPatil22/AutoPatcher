@@ -19,6 +19,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
+if "last_ticket" not in st.session_state:
+    st.session_state.last_ticket = None
+
 with st.sidebar:
     st.header("Code Search Index")
 
@@ -87,6 +92,65 @@ with col_input:
 
     submitted = st.button("Generate Fix", type="primary", use_container_width=True)
 
+    if st.session_state.last_result:
+        st.divider()
+        st.subheader("Refine Fix")
+        feedback = st.text_area(
+            "Feedback",
+            height=100,
+            placeholder="e.g. The fix should dispatch fetchProducts inside a useEffect hook",
+            help="Describe what's wrong with the generated fix so the LLM can revise it.",
+        )
+        refine_submitted = st.button("Refine Fix", use_container_width=True)
+    else:
+        feedback = ""
+        refine_submitted = False
+
+
+def display_patches(data):
+    patches = data.get("patches", [])
+
+    if patches:
+        st.success(
+            f"Patch generated! "
+            f"{len(patches)} file{'s' if len(patches) != 1 else ''} affected."
+        )
+    else:
+        st.warning("LLM did not return any file patches.")
+
+    st.markdown(f"**Explanation:** {data['explanation']}")
+
+    for i, patch in enumerate(patches):
+        has_warning = patch.get("warning", "")
+        label = patch["file_path"]
+        if has_warning:
+            label += "  [quality warning]"
+
+        with st.expander(label, expanded=i == 0):
+            if has_warning:
+                st.warning(has_warning)
+
+            tab_diff, tab_fixed, tab_original = st.tabs(
+                ["Diff", "Fixed Code", "Original Code"]
+            )
+
+            with tab_diff:
+                if patch["diff"]:
+                    st.code(patch["diff"], language="diff")
+                else:
+                    st.info("No differences detected.")
+
+            with tab_fixed:
+                st.code(patch["fixed_code"])
+
+            with tab_original:
+                st.code(patch["original_code"])
+
+    if patches:
+        with st.expander("Raw JSON"):
+            st.json(data)
+
+
 with col_output:
     st.subheader("Patch Result")
 
@@ -100,35 +164,15 @@ with col_output:
 
             with st.spinner("Fetching context & calling LLM..."):
                 try:
-                    resp = requests.post(f"{API_URL}/generate-fix", json=payload, timeout=60)
+                    resp = requests.post(
+                        f"{API_URL}/generate-fix", json=payload, timeout=120
+                    )
 
                     if resp.status_code == 200:
                         data = resp.json()
-
-                        st.success("Patch generated!")
-
-                        st.markdown(f"**File:** `{data['file_path']}`")
-                        st.markdown(f"**Explanation:** {data['explanation']}")
-
-                        tab_diff, tab_fixed, tab_original, tab_json = st.tabs(
-                            ["Diff", "Fixed Code", "Original Code", "Raw JSON"]
-                        )
-
-                        with tab_diff:
-                            if data["diff"]:
-                                st.code(data["diff"], language="diff")
-                            else:
-                                st.info("No differences detected (code may already be correct).")
-
-                        with tab_fixed:
-                            st.code(data["fixed_code"], language="python")
-
-                        with tab_original:
-                            st.code(data["original_code"], language="python")
-
-                        with tab_json:
-                            st.json(data)
-
+                        st.session_state.last_result = data
+                        st.session_state.last_ticket = payload
+                        display_patches(data)
                     else:
                         error_detail = resp.json().get("detail", resp.text)
                         st.error(f"API error ({resp.status_code}): {error_detail}")
@@ -140,5 +184,46 @@ with col_output:
                     )
                 except Exception as e:
                     st.error(f"Unexpected error: {e}")
+
+    elif refine_submitted:
+        if not feedback:
+            st.error("Please provide feedback describing what to fix.")
+        else:
+            prev = st.session_state.last_result
+            ticket = st.session_state.last_ticket
+
+            refine_payload = {
+                "title": ticket["title"],
+                "description": ticket["description"],
+                "file_hint": ticket.get("file_hint"),
+                "feedback": feedback,
+                "previous_patches": prev["patches"],
+            }
+
+            with st.spinner("Refining fix with your feedback..."):
+                try:
+                    resp = requests.post(
+                        f"{API_URL}/refine-fix", json=refine_payload, timeout=120
+                    )
+
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        st.session_state.last_result = data
+                        display_patches(data)
+                    else:
+                        error_detail = resp.json().get("detail", resp.text)
+                        st.error(f"API error ({resp.status_code}): {error_detail}")
+
+                except requests.ConnectionError:
+                    st.error(
+                        "Cannot connect to the backend. "
+                        "Make sure the FastAPI server is running on http://localhost:8000"
+                    )
+                except Exception as e:
+                    st.error(f"Unexpected error: {e}")
+
+    elif st.session_state.last_result:
+        display_patches(st.session_state.last_result)
+
     else:
         st.info("Fill in a bug ticket on the left and click **Generate Fix**.")

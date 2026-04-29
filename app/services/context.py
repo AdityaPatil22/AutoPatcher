@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from app.config import SAMPLE_REPO_PATH, SEARCH_MODE
+from app.config import MAX_CONTEXT_FILES, SAMPLE_REPO_PATH, SEARCH_MODE
 
 SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".rs",
@@ -149,6 +149,37 @@ def get_best_context(query: str, file_hint: str | None = None) -> dict:
     if results:
         return results[0]
     return {"path": "", "filename": "", "content": "No relevant code found.", "score": 0}
+
+
+def get_top_contexts(
+    query: str,
+    file_hint: str | None = None,
+    max_files: int | None = None,
+) -> list[dict]:
+    if max_files is None:
+        max_files = MAX_CONTEXT_FILES
+
+    if SEARCH_MODE == "semantic":
+        results = search_files_semantic(query, file_hint)
+    elif SEARCH_MODE == "hybrid":
+        results = search_files_hybrid(query, file_hint)
+    else:
+        results = search_files(query, file_hint)
+
+    if not results and file_hint:
+        if SEARCH_MODE == "semantic":
+            results = search_files_semantic(query)
+        elif SEARCH_MODE == "hybrid":
+            results = search_files_hybrid(query)
+        else:
+            results = search_files(query)
+
+    if not results and SEARCH_MODE != "keyword":
+        results = search_files(query, file_hint)
+        if not results and file_hint:
+            results = search_files(query)
+
+    return results[:max_files]
 
 
 def _extract_keywords(text: str) -> list[str]:
