@@ -103,6 +103,12 @@ def _sanitize_code(code) -> str:
     if code.count('\\"') > 2 and code.count('"') < code.count('\\"'):
         code = code.replace('\\"', '"')
 
+    # Strip line number prefixes the LLM may have copied from the prompt
+    lines = code.split("\n")
+    stripped = [re.sub(r"^\s*\d+\s*\|\s?", "", line) for line in lines]
+    if stripped != lines:
+        code = "\n".join(stripped)
+
     return code
 
 

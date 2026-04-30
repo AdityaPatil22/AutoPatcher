@@ -49,6 +49,18 @@ export interface IndexStatus {
   total_chunks: number;
 }
 
+export interface FileNode {
+  name: string;
+  type: "file" | "folder";
+  children?: FileNode[];
+}
+
+export interface IndexFiles {
+  tree: FileNode[];
+  total_files: number;
+  root?: string;
+}
+
 export interface IndexResult {
   status: string;
   files_indexed: number;

@@ -144,3 +144,15 @@ def get_index_stats() -> dict:
         return {"indexed": collection.count() > 0, "total_chunks": collection.count()}
     except Exception:
         return {"indexed": False, "total_chunks": 0}
+
+
+def get_indexed_files() -> list[str]:
+    try:
+        collection = _get_collection()
+        if collection.count() == 0:
+            return []
+        result = collection.get(include=["metadatas"])
+        paths = sorted({m["filepath"] for m in result["metadatas"]})
+        return paths
+    except Exception:
+        return []

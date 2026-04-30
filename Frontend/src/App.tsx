@@ -10,6 +10,7 @@ import {
   setProvider,
   setSearchMode,
 } from "./api";
+import FileTree from "./components/FileTree";
 import IndexModal from "./components/IndexModal";
 import PatchCard from "./components/PatchCard";
 import type {
@@ -34,6 +35,7 @@ export default function App() {
   const [feedback, setFeedback] = useState("");
   const [showRawJson, setShowRawJson] = useState(false);
   const [showIndexModal, setShowIndexModal] = useState(false);
+  const [treeRefreshKey, setTreeRefreshKey] = useState(0);
 
   const [indexState, setIndexState] = useState<
     "checking" | "ready" | "empty" | "error"
@@ -507,6 +509,8 @@ export default function App() {
             </div>
           )}
 
+          <FileTree refreshKey={treeRefreshKey} />
+
           {!result && !loading && (
             <div className="empty-state">
               <svg
@@ -591,7 +595,10 @@ export default function App() {
       <IndexModal
         open={showIndexModal}
         onClose={() => setShowIndexModal(false)}
-        onIndexed={fetchIndex}
+        onIndexed={() => {
+          fetchIndex();
+          setTreeRefreshKey((k) => k + 1);
+        }}
       />
     </div>
   );

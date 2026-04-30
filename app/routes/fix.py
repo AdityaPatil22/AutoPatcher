@@ -1,3 +1,6 @@
+import logging
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 
 from app.models import FilePatch, PatchOutput, RefineInput, TicketInput
@@ -6,6 +9,8 @@ from app.services.llm import call_llm
 from app.services.prompt import build_prompt, build_refine_prompt
 from app.utils.diff import generate_unified_diff
 from app.utils.patch import apply_changes
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["patch"])
 
@@ -28,6 +33,8 @@ def generate_fix(ticket: TicketInput):
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
+
+    logger.info("LLM result keys: %s", list(llm_result.keys()))
 
     explanation = llm_result.get("explanation", "No explanation provided.")
     patches = _build_patches(llm_result, contexts)
@@ -75,19 +82,53 @@ def refine_fix(refine: RefineInput):
     )
 
 
+def _match_context(filename: str, contexts: list[dict]) -> dict | None:
+    """Find the best matching context for a filename from the LLM."""
+    fname_lower = filename.lower()
+    fname_base = Path(filename).name.lower()
+
+    for ctx in contexts:
+        ctx_name = ctx["filename"].lower()
+        if ctx_name == fname_lower or ctx_name == fname_base:
+            return ctx
+
+    for ctx in contexts:
+        if Path(ctx["filename"]).name.lower() == fname_base:
+            return ctx
+
+    for ctx in contexts:
+        if fname_base in ctx["filename"].lower() or ctx["filename"].lower() in fname_lower:
+            return ctx
+
+    return None
+
+
 def _build_patches(llm_result: dict, contexts: list[dict]) -> list[FilePatch]:
-    ctx_by_name = {ctx["filename"]: ctx for ctx in contexts}
     patches = []
+    matched_files = set()
 
     fixes = llm_result.get("fixes", [])
     for fix in fixes:
-        fname = fix.get("filename", "")
-        ctx = ctx_by_name.get(fname)
-        if not ctx:
+        if not isinstance(fix, dict):
             continue
 
+        fname = fix.get("filename", "")
+        ctx = _match_context(fname, contexts)
+        if not ctx:
+            logger.warning("No context match for LLM filename: %s", fname)
+            continue
+
+        matched_files.add(ctx["filename"])
         changes = fix.get("changes", [])
+
         if changes:
+            logger.info(
+                "Applying %d changes to %s", len(changes), ctx["filename"]
+            )
+            for i, c in enumerate(changes):
+                orig_preview = str(c.get("original", ""))[:80]
+                logger.info("  Change %d original: %s", i, repr(orig_preview))
+
             fixed_code = apply_changes(ctx["content"], changes)
             warning = ""
             if fixed_code == ctx["content"]:
@@ -101,9 +142,9 @@ def _build_patches(llm_result: dict, contexts: list[dict]) -> list[FilePatch]:
         else:
             continue
 
-        diff = generate_unified_diff(ctx["content"], fixed_code, fname)
+        diff = generate_unified_diff(ctx["content"], fixed_code, ctx["filename"])
         patches.append(FilePatch(
-            file_path=fname,
+            file_path=ctx["filename"],
             original_code=ctx["content"],
             fixed_code=fixed_code,
             diff=diff,

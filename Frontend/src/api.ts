@@ -1,5 +1,6 @@
 import type {
   CloudService,
+  IndexFiles,
   IndexResult,
   IndexStatus,
   LLMProvider,
@@ -54,6 +55,10 @@ export function indexRepository(repoPath?: string) {
     method: "POST",
     body: JSON.stringify(repoPath ? { repo_path: repoPath } : {}),
   });
+}
+
+export function getIndexFiles() {
+  return request<IndexFiles>("/index/files");
 }
 
 export function getSettings() {
