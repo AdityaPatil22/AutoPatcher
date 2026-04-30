@@ -26,7 +26,7 @@ app.include_router(fix_router, prefix="/api")
 app.include_router(index_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 
-FRONTEND_DIST = Path(__file__).resolve().parent / "Frontend" / "dist"
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "Frontend" / "dist"
 
 
 @app.get("/health")

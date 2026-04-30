@@ -29,6 +29,7 @@ export default function App() {
   });
   const [fileHint, setFileHint] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [refineLoading, setRefineLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<PatchOutput | null>(null);
@@ -57,6 +58,7 @@ export default function App() {
   });
 
   const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const loadingTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const fetchIndex = useCallback(async () => {
     try {
@@ -160,15 +162,25 @@ export default function App() {
     }
   }
 
-  async function handleGenerateFix(e: React.FormEvent) {
-    e.preventDefault();
+  function clearLoadingTimers() {
+    loadingTimers.current.forEach(clearTimeout);
+    loadingTimers.current = [];
+  }
+
+  async function handleGenerateFix(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!ticket.title.trim() || !ticket.description.trim()) return;
 
     setLoading(true);
+    setLoadingStep(0);
     setError("");
     setResult(null);
     setFeedback("");
     setShowRawJson(false);
+
+    clearLoadingTimers();
+    loadingTimers.current.push(setTimeout(() => setLoadingStep(1), 2000));
+    loadingTimers.current.push(setTimeout(() => setLoadingStep(2), 5000));
 
     try {
       const payload: TicketInput = {
@@ -182,7 +194,9 @@ export default function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
+      clearLoadingTimers();
       setLoading(false);
+      setLoadingStep(0);
     }
   }
 
@@ -281,7 +295,7 @@ export default function App() {
 
       <main className="layout">
         <section className="panel input-panel">
-          <h2>Bug Ticket</h2>
+          <h2>Add Bug Details</h2>
           <form onSubmit={handleGenerateFix}>
             <div className="form-group">
               <label htmlFor="title">Title</label>
@@ -531,15 +545,35 @@ export default function App() {
 
         <section className="panel output-panel">
           {error && (
-            <div className="error-banner">
-              <strong>Error:</strong> {error}
-              <button
-                className="close-btn"
-                onClick={() => setError("")}
-                type="button"
-              >
-                &times;
-              </button>
+            <div className="error-card">
+              <div className="error-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <div className="error-content">
+                <div className="error-title">Something went wrong</div>
+                <div className="error-detail">{error}</div>
+              </div>
+              <div className="error-actions">
+                <button
+                  className="btn btn-sm"
+                  onClick={() => { setError(""); handleGenerateFix(); }}
+                  type="button"
+                >
+                  Try Again
+                </button>
+                <button
+                  className="error-dismiss"
+                  onClick={() => setError("")}
+                  type="button"
+                  aria-label="Dismiss"
+                >
+                  &times;
+                </button>
+              </div>
             </div>
           )}
 
@@ -567,12 +601,43 @@ export default function App() {
 
           {(loading || refineLoading) && (
             <div className="loading-overlay">
-              <div className="spinner" />
-              <p>
-                {refineLoading
-                  ? "Refining patches with your feedback..."
-                  : "Analyzing code and generating fix..."}
-              </p>
+              {refineLoading ? (
+                <>
+                  <div className="spinner" />
+                  <p>Refining patches with your feedback...</p>
+                </>
+              ) : (
+                <>
+                  <div className="loading-steps">
+                    {[
+                      { label: "Searching files", icon: "search" },
+                      { label: "Analyzing code", icon: "analyze" },
+                      { label: "Generating patches", icon: "generate" },
+                    ].map((step, i) => (
+                      <div key={step.icon} className="loading-step-row">
+                        {i > 0 && (
+                          <div className={`step-connector ${loadingStep >= i ? "done" : ""}`} />
+                        )}
+                        <div className={`step-item ${loadingStep === i ? "active" : ""} ${loadingStep > i ? "done" : ""}`}>
+                          <div className="step-dot">
+                            {loadingStep > i ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <span className="step-number">{i + 1}</span>
+                            )}
+                          </div>
+                          <span className="step-label">{step.label}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="loading-bar">
+                    <div className="loading-bar-fill" />
+                  </div>
+                </>
+              )}
             </div>
           )}
 

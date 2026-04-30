@@ -1,40 +1,79 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getIndexFiles } from "../api";
 import type { FileNode } from "../types";
 
-const EXT_ICONS: Record<string, string> = {
-  py: "\u{1F40D}",
-  js: "\u{1F7E8}",
-  ts: "\u{1F535}",
-  jsx: "\u26A1",
-  tsx: "\u26A1",
-  vue: "\u{1F49A}",
-  java: "\u2615",
-  go: "\u{1F439}",
-  rb: "\u{1F48E}",
-  rs: "\u2699\uFE0F",
-  cpp: "\u{1F1E8}",
-  c: "\u{1F1E8}",
-  html: "\u{1F310}",
-  css: "\u{1F3A8}",
-  json: "\u{1F4CB}",
-  svelte: "\u{1F525}",
-  kt: "\u{1F7E3}",
-  swift: "\u{1F34A}",
+const EXT_COLORS: Record<string, string> = {
+  py: "#3572A5",
+  js: "#f1e05a",
+  ts: "#3178c6",
+  jsx: "#f1e05a",
+  tsx: "#3178c6",
+  vue: "#41b883",
+  java: "#b07219",
+  go: "#00ADD8",
+  rb: "#CC342D",
+  rs: "#dea584",
+  cpp: "#f34b7d",
+  c: "#555555",
+  html: "#e34c26",
+  css: "#563d7c",
+  json: "#8b949e",
+  svelte: "#ff3e00",
+  kt: "#A97BFF",
+  swift: "#F05138",
 };
 
-function getIcon(name: string): string {
+function ExtDot({ name }: { name: string }) {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  return EXT_ICONS[ext] || "\u{1F4C4}";
+  const color = EXT_COLORS[ext] || "var(--text-dim)";
+  return (
+    <span
+      className="tree-ext-dot"
+      style={{ background: color }}
+    />
+  );
 }
 
-function TreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
-  const [open, setOpen] = useState(depth < 2);
+function countFiles(node: FileNode): number {
+  if (node.type === "file") return 1;
+  return (node.children ?? []).reduce((sum, c) => sum + countFiles(c), 0);
+}
+
+function filterTree(nodes: FileNode[], query: string): FileNode[] {
+  if (!query) return nodes;
+  const q = query.toLowerCase();
+  return nodes.reduce<FileNode[]>((acc, node) => {
+    if (node.type === "file") {
+      if (node.name.toLowerCase().includes(q)) acc.push(node);
+    } else {
+      const filteredChildren = filterTree(node.children ?? [], query);
+      if (filteredChildren.length > 0) {
+        acc.push({ ...node, children: filteredChildren });
+      }
+    }
+    return acc;
+  }, []);
+}
+
+function TreeNode({
+  node,
+  depth = 0,
+  forceExpanded,
+}: {
+  node: FileNode;
+  depth?: number;
+  forceExpanded?: boolean;
+}) {
+  const [open, setOpen] = useState(forceExpanded ?? depth < 2);
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setOpen(forceExpanded);
+  }, [forceExpanded]);
 
   if (node.type === "file") {
     return (
-      <div className="tree-file" style={{ paddingLeft: depth * 16 }}>
-        <span className="tree-icon">{getIcon(node.name)}</span>
+      <div className="tree-file" style={{ paddingLeft: 16 + depth * 16 }}>
+        <ExtDot name={node.name} />
         <span className="tree-name">{node.name}</span>
       </div>
     );
@@ -44,7 +83,7 @@ function TreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
     <div className="tree-folder-wrapper">
       <button
         className="tree-folder"
-        style={{ paddingLeft: depth * 16 }}
+        style={{ paddingLeft: 16 + depth * 16 }}
         onClick={() => setOpen(!open)}
         type="button"
       >
@@ -59,7 +98,12 @@ function TreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
         >
           <polyline points="9,18 15,12 9,6" />
         </svg>
-        <span className="tree-icon">{open ? "\u{1F4C2}" : "\u{1F4C1}"}</span>
+        <svg className="tree-folder-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {open
+            ? <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+            : <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+          }
+        </svg>
         <span className="tree-name">{node.name}</span>
         {node.children && (
           <span className="tree-count">{countFiles(node)}</span>
@@ -68,17 +112,17 @@ function TreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
       {open && node.children && (
         <div className="tree-children">
           {node.children.map((child) => (
-            <TreeNode key={child.name} node={child} depth={depth + 1} />
+            <TreeNode
+              key={child.name}
+              node={child}
+              depth={depth + 1}
+              forceExpanded={forceExpanded}
+            />
           ))}
         </div>
       )}
     </div>
   );
-}
-
-function countFiles(node: FileNode): number {
-  if (node.type === "file") return 1;
-  return (node.children ?? []).reduce((sum, c) => sum + countFiles(c), 0);
 }
 
 interface Props {
@@ -91,6 +135,10 @@ export default function FileTree({ refreshKey }: Props) {
   const [root, setRoot] = useState("");
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [allExpanded, setAllExpanded] = useState<boolean | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -107,16 +155,35 @@ export default function FileTree({ refreshKey }: Props) {
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
+  const filteredTree = useMemo(
+    () => filterTree(tree, filter),
+    [tree, filter]
+  );
+
   if (loading) {
     return (
       <div className="file-tree-panel">
-        <div className="tree-loading">Loading files...</div>
+        <div className="tree-loading">
+          <div className="tree-loading-shimmer" />
+          <div className="tree-loading-shimmer short" />
+          <div className="tree-loading-shimmer" />
+        </div>
       </div>
     );
   }
 
   if (totalFiles === 0) {
-    return null;
+    return (
+      <div className="file-tree-panel">
+        <div className="tree-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+          </svg>
+          <p>No files indexed yet</p>
+          <p className="tree-empty-sub">Index a repository to see files here</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -144,11 +211,71 @@ export default function FileTree({ refreshKey }: Props) {
         {root && <span className="tree-root">{root}</span>}
       </button>
       {expanded && (
-        <div className="file-tree-body">
-          {tree.map((node) => (
-            <TreeNode key={node.name} node={node} />
-          ))}
-        </div>
+        <>
+          <div className="tree-toolbar">
+            <div className="tree-search">
+              <svg className="tree-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                className="tree-search-input"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filter files..."
+              />
+              {filter && (
+                <button
+                  className="tree-search-clear"
+                  onClick={() => setFilter("")}
+                  type="button"
+                  aria-label="Clear filter"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+            <div className="tree-controls">
+              <button
+                className="tree-control-btn"
+                onClick={() => setAllExpanded(true)}
+                type="button"
+                title="Expand all"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="7,13 12,18 17,13" />
+                  <polyline points="7,6 12,11 17,6" />
+                </svg>
+              </button>
+              <button
+                className="tree-control-btn"
+                onClick={() => setAllExpanded(false)}
+                type="button"
+                title="Collapse all"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="7,11 12,6 17,11" />
+                  <polyline points="7,18 12,13 17,18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="file-tree-body">
+            {filteredTree.length > 0 ? (
+              filteredTree.map((node) => (
+                <TreeNode
+                  key={node.name}
+                  node={node}
+                  forceExpanded={filter ? true : allExpanded}
+                />
+              ))
+            ) : (
+              <div className="tree-no-results">
+                No files match "{filter}"
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
