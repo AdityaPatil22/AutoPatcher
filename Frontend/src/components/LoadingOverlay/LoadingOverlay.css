@@ -1,15 +1,19 @@
 .loading-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 80px 20px;
+  gap: 28px;
+  background: var(--bg);
+  opacity: 0.95;
+  z-index: 10;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   border: 3px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
@@ -18,27 +22,29 @@
 
 .loading-overlay p {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .loading-steps {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0;
-  width: 260px;
+  width: 300px;
 }
 
 .loading-step-row {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 100%;
 }
 
 .step-connector {
   width: 2px;
-  height: 20px;
+  height: 24px;
   background: var(--border);
-  margin-left: 15px;
+  margin-left: 19px;
   transition: background 0.4s;
 }
 
@@ -49,8 +55,8 @@
 .step-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 0;
+  gap: 14px;
+  padding: 8px 0;
   opacity: 0.4;
   transition: opacity 0.4s;
 }
@@ -64,13 +70,13 @@
 }
 
 .step-dot {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   border: 2px solid var(--border);
   color: var(--text-muted);
@@ -98,7 +104,7 @@
 }
 
 .step-label {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-muted);
   transition: color 0.4s;
@@ -114,27 +120,5 @@
 
 @keyframes step-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--primary-bg); }
-  50% { box-shadow: 0 0 0 8px transparent; }
-}
-
-.loading-bar {
-  width: 260px;
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-
-.loading-bar-fill {
-  height: 100%;
-  width: 40%;
-  background: var(--primary);
-  border-radius: 2px;
-  animation: loading-slide 1.5s ease-in-out infinite;
-}
-
-@keyframes loading-slide {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(350%); }
+  50% { box-shadow: 0 0 0 10px transparent; }
 }

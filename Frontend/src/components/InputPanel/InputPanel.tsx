@@ -32,12 +32,7 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
     fileHint,
     setFileHint,
     loading,
-    refineLoading,
-    result,
-    feedback,
-    setFeedback,
     handleGenerateFix,
-    handleRefineFix,
   } = patchGen;
 
   return (
@@ -253,32 +248,6 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
           {loading ? "Generating..." : "Generate Fix"}
         </button>
       </form>
-
-      {result && (
-        <div className="refine-section">
-          <h3>Refine Fix</h3>
-          <p className="refine-hint">
-            Not satisfied? Provide feedback and regenerate.
-          </p>
-          <div className="form-group">
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              rows={3}
-              placeholder="e.g. The fix should also handle the edge case where..."
-            />
-          </div>
-          <button
-            className="btn btn-secondary btn-full"
-            onClick={handleRefineFix}
-            disabled={refineLoading || !feedback.trim()}
-            type="button"
-          >
-            {refineLoading && <span className="spinner-inline" />}
-            {refineLoading ? "Refining..." : "Refine Fix"}
-          </button>
-        </div>
-      )}
     </section>
   );
 }

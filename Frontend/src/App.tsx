@@ -47,6 +47,9 @@ export default function App() {
           setShowRawJson={patchGen.setShowRawJson}
           treeRefreshKey={treeRefreshKey}
           handleGenerateFix={patchGen.handleGenerateFix}
+          feedback={patchGen.feedback}
+          setFeedback={patchGen.setFeedback}
+          handleRefineFix={patchGen.handleRefineFix}
         />
       </main>
 

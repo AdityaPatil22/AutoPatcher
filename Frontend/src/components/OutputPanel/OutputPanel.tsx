@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { PatchOutput } from "../../types";
 import ErrorCard from "../ErrorCard/ErrorCard";
 import FileTree from "../FileTree/FileTree";
@@ -16,6 +17,9 @@ interface OutputPanelProps {
   setShowRawJson: (v: boolean) => void;
   treeRefreshKey: number;
   handleGenerateFix: () => void;
+  feedback: string;
+  setFeedback: (v: string) => void;
+  handleRefineFix: () => void;
 }
 
 export default function OutputPanel({
@@ -29,7 +33,12 @@ export default function OutputPanel({
   setShowRawJson,
   treeRefreshKey,
   handleGenerateFix,
+  feedback,
+  setFeedback,
+  handleRefineFix,
 }: OutputPanelProps) {
+  const [refineOpen, setRefineOpen] = useState(false);
+
   return (
     <section className="panel output-panel">
       {error && (
@@ -79,7 +88,18 @@ export default function OutputPanel({
                 {result.patches.length !== 1 ? "s" : ""} patched
               </span>
               <button
-                className={`btn btn-sm ${showRawJson ? "active" : ""}`}
+                className={`btn-refine ${refineOpen ? "open" : ""}`}
+                onClick={() => setRefineOpen(!refineOpen)}
+                type="button"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Refine Fix
+              </button>
+              <button
+                className={`btn-json ${showRawJson ? "active" : ""}`}
                 onClick={() => setShowRawJson(!showRawJson)}
                 type="button"
               >
@@ -87,6 +107,50 @@ export default function OutputPanel({
               </button>
             </div>
           </div>
+
+          {refineOpen && (
+            <div className="refine-drawer">
+              <div className="refine-drawer-header">
+                <div className="refine-drawer-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  <span>Refine this fix</span>
+                </div>
+                <button
+                  className="refine-drawer-close"
+                  onClick={() => setRefineOpen(false)}
+                  type="button"
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+              </div>
+              <p className="refine-drawer-hint">
+                Describe what should change and we'll regenerate the patches.
+              </p>
+              <textarea
+                className="refine-textarea"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                rows={3}
+                placeholder="e.g. The fix should also handle the edge case where..."
+              />
+              <button
+                className="btn btn-primary refine-submit"
+                onClick={() => {
+                  handleRefineFix();
+                  setRefineOpen(false);
+                }}
+                disabled={refineLoading || !feedback.trim()}
+                type="button"
+              >
+                {refineLoading && <span className="spinner-inline" />}
+                {refineLoading ? "Refining..." : "Refine Fix"}
+              </button>
+            </div>
+          )}
 
           <div className="explanation-card">
             <h3>Explanation</h3>

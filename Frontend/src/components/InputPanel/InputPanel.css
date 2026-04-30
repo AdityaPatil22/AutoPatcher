@@ -168,15 +168,3 @@
 .stepper-input:focus {
   box-shadow: none;
 }
-
-.refine-section {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-}
-
-.refine-hint {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
