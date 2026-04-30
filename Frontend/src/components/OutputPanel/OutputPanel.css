@@ -1,0 +1,83 @@
+.output-panel {
+  position: relative;
+  max-height: calc(100vh - 57px);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  color: var(--text-dim);
+  gap: 16px;
+}
+
+.empty-state p {
+  font-size: 15px;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.results-header h2 {
+  margin-bottom: 0;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.patch-count {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+.explanation-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.explanation-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.no-patches {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+  padding: 16px;
+  border-radius: var(--radius);
+  text-align: center;
+  font-size: 14px;
+}
+
+.raw-json {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.raw-json pre {
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

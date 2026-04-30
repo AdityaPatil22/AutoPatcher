@@ -1,0 +1,140 @@
+.loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 80px 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-overlay p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 260px;
+}
+
+.loading-step-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.step-connector {
+  width: 2px;
+  height: 20px;
+  background: var(--border);
+  margin-left: 15px;
+  transition: background 0.4s;
+}
+
+.step-connector.done {
+  background: var(--green);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  opacity: 0.4;
+  transition: opacity 0.4s;
+}
+
+.step-item.active {
+  opacity: 1;
+}
+
+.step-item.done {
+  opacity: 0.8;
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface);
+  transition: all 0.4s;
+  flex-shrink: 0;
+}
+
+.step-item.active .step-dot {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-bg);
+  animation: step-pulse 1.5s ease-in-out infinite;
+}
+
+.step-item.done .step-dot {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-bg);
+  animation: none;
+}
+
+.step-number {
+  font-family: var(--font-mono);
+}
+
+.step-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.4s;
+}
+
+.step-item.active .step-label {
+  color: var(--text);
+}
+
+.step-item.done .step-label {
+  color: var(--text-muted);
+}
+
+@keyframes step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--primary-bg); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+.loading-bar {
+  width: 260px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.loading-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: var(--primary);
+  border-radius: 2px;
+  animation: loading-slide 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}

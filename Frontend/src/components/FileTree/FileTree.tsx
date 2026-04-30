@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { getIndexFiles } from "../api";
-import type { FileNode } from "../types";
+import { getIndexFiles } from "../../api/indexing";
+import type { FileNode } from "../../types";
+import "./FileTree.css";
 
 const EXT_COLORS: Record<string, string> = {
   py: "#3572A5",

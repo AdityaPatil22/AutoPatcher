@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { indexRepository } from "../api";
-import type { IndexResult } from "../types";
+import { indexRepository } from "../../api/indexing";
+import type { IndexResult } from "../../types";
+import "./IndexModal.css";
 
 type Phase = "idle" | "indexing" | "success" | "error";
 

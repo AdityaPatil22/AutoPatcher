@@ -1,17 +1,18 @@
 import { useState } from "react";
-import type { FilePatch } from "../types";
+import type { FilePatch } from "../../types";
+import "./PatchCard.css";
 
 const FILE_ICONS: Record<string, string> = {
   py: "\u{1F40D}",
   js: "\u{1F7E8}",
   ts: "\u{1F535}",
-  jsx: "\u26A1",
-  tsx: "\u26A1",
+  jsx: "⚡",
+  tsx: "⚡",
   vue: "\u{1F49A}",
-  java: "\u2615",
+  java: "☕",
   go: "\u{1F439}",
   rb: "\u{1F48E}",
-  rs: "\u2699\uFE0F",
+  rs: "⚙️",
   cpp: "\u{1F1E8}",
   c: "\u{1F1E8}",
   html: "\u{1F310}",
