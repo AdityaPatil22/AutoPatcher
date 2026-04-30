@@ -206,7 +206,7 @@ export default function FileTree({ refreshKey }: Props) {
           >
             <polyline points="9,18 15,12 9,6" />
           </svg>
-          <span>Indexed Files</span>
+          <span>{root ? root.split("/").filter(Boolean).pop() : "Indexed Files"}</span>
           <span className="tree-badge">{totalFiles}</span>
         </div>
         {root && <span className="tree-root">{root}</span>}

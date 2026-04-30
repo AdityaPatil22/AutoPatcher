@@ -16,16 +16,16 @@ Respond with valid JSON using this exact structure:
 {
   "fixes": [
     {
-      "filename": "example.jsx",
+      "filename": "<actual filename>",
       "changes": [
         {
-          "original": "  const tag = \"h1\";",
-          "modified": "  const tag = \"h2\";"
+          "original": "<exact lines from source that need to change>",
+          "modified": "<corrected version of those lines>"
         }
       ]
     }
   ],
-  "explanation": "Changed the default heading tag from h1 to h2."
+  "explanation": "<describe what the bug was and how your fix resolves it>"
 }
 
 Critical rules for "original":
@@ -38,10 +38,14 @@ Critical rules for "modified":
 - Write the corrected version of those same lines
 - Keep the same indentation style as the original
 
+Critical rules for "explanation":
+- Describe the ACTUAL bug from the bug report and how your changes fix it
+- Do NOT use a generic or placeholder explanation
+- Keep it under 3 sentences
+
 General rules:
 - Only include files that actually need changes
-- Keep each change small and focused
-- Keep your explanation under 3 sentences\
+- Keep each change small and focused\
 """
 
 
