@@ -1,0 +1,598 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  generateFix,
+  getIndexStatus,
+  getSettings,
+  refineFix,
+  setApiKey,
+  setMaxContextFiles,
+  setModel,
+  setProvider,
+  setSearchMode,
+} from "./api";
+import IndexModal from "./components/IndexModal";
+import PatchCard from "./components/PatchCard";
+import type {
+  CloudService,
+  LLMProvider,
+  PatchOutput,
+  SearchMode,
+  TicketInput,
+} from "./types";
+import "./App.css";
+
+export default function App() {
+  const [ticket, setTicket] = useState<TicketInput>({
+    title: "",
+    description: "",
+  });
+  const [fileHint, setFileHint] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<PatchOutput | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [showIndexModal, setShowIndexModal] = useState(false);
+
+  const [indexState, setIndexState] = useState<
+    "checking" | "ready" | "empty" | "error"
+  >("checking");
+  const [indexChunks, setIndexChunks] = useState(0);
+  const [searchMode, setSearchModeState] = useState<SearchMode>("hybrid");
+  const [maxContextFiles, setMaxContextFilesState] = useState(3);
+
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("local");
+  const [modelName, setModelName] = useState("");
+  const [cloudService, setCloudService] = useState<CloudService>("openai");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [openaiKeyHint, setOpenaiKeyHint] = useState("");
+  const [geminiKeyHint, setGeminiKeyHint] = useState("");
+  const [keySaved, setKeySaved] = useState(false);
+
+  const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const fetchIndex = useCallback(async () => {
+    try {
+      const data = await getIndexStatus();
+      if (data.indexed && data.total_chunks > 0) {
+        setIndexState("ready");
+        setIndexChunks(data.total_chunks);
+      } else {
+        setIndexState("empty");
+      }
+    } catch {
+      setIndexState("error");
+    }
+  }, []);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const s = await getSettings();
+      setSearchModeState(s.search_mode);
+      setMaxContextFilesState(s.max_context_files);
+      setLlmProvider(s.provider);
+      setModelName(s.model);
+      setOpenaiKeyHint(s.openai_key_hint);
+      setGeminiKeyHint(s.gemini_key_hint);
+      if (s.cloud_backend) {
+        setCloudService(s.cloud_backend);
+      }
+    } catch {
+      /* backend not reachable */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchIndex();
+    fetchSettings();
+  }, [fetchIndex, fetchSettings]);
+
+  async function handleProviderChange(provider: LLMProvider) {
+    setLlmProvider(provider);
+    setApiKeyInput("");
+    setKeySaved(false);
+    try {
+      await setProvider(provider);
+    } catch {
+      await fetchSettings();
+    }
+  }
+
+  function handleModelInput(value: string) {
+    setModelName(value);
+    clearTimeout(modelDebounce.current);
+    modelDebounce.current = setTimeout(async () => {
+      if (value.trim()) {
+        try {
+          await setModel(value.trim());
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 600);
+  }
+
+  async function handleSaveApiKey() {
+    if (!apiKeyInput.trim()) return;
+    try {
+      const res = await setApiKey(cloudService, apiKeyInput.trim());
+      if (cloudService === "openai") {
+        setOpenaiKeyHint(res.key_hint);
+      } else {
+        setGeminiKeyHint(res.key_hint);
+      }
+      setApiKeyInput("");
+      setKeySaved(true);
+      setTimeout(() => setKeySaved(false), 3000);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function handleSearchModeChange(mode: SearchMode) {
+    setSearchModeState(mode);
+    try {
+      await setSearchMode(mode);
+    } catch {
+      await fetchSettings();
+    }
+  }
+
+  async function handleMaxContextFilesChange(value: number) {
+    if (value < 1 || value > 20) return;
+    setMaxContextFilesState(value);
+    try {
+      await setMaxContextFiles(value);
+    } catch {
+      await fetchSettings();
+    }
+  }
+
+  async function handleGenerateFix(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ticket.title.trim() || !ticket.description.trim()) return;
+
+    setLoading(true);
+    setError("");
+    setResult(null);
+    setFeedback("");
+    setShowRawJson(false);
+
+    try {
+      const payload: TicketInput = {
+        title: ticket.title,
+        description: ticket.description,
+      };
+      if (fileHint.trim()) payload.file_hint = fileHint;
+
+      const data = await generateFix(payload);
+      setResult(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRefineFix() {
+    if (!feedback.trim() || !result) return;
+
+    setRefineLoading(true);
+    setError("");
+
+    try {
+      const data = await refineFix({
+        title: ticket.title,
+        description: ticket.description,
+        feedback,
+        file_hint: fileHint.trim() || undefined,
+        previous_patches: result.patches,
+      });
+      setResult(data);
+      setFeedback("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setRefineLoading(false);
+    }
+  }
+
+  const indexStatusText =
+    indexState === "ready"
+      ? `Indexed (${indexChunks} chunks)`
+      : indexState === "empty"
+        ? "Not indexed"
+        : indexState === "error"
+          ? "Backend offline"
+          : "Checking...";
+
+  const currentKeyHint =
+    cloudService === "openai" ? openaiKeyHint : geminiKeyHint;
+
+  return (
+    <div className="app">
+      <header className="top-bar">
+        <div className="logo">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          <span>AutoPatch AI</span>
+        </div>
+        <div className="top-actions">
+          <div className={`index-status ${indexState}`}>
+            <span className="status-dot" />
+            <span>{indexStatusText}</span>
+          </div>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowIndexModal(true)}
+            type="button"
+          >
+            Index Repository
+          </button>
+        </div>
+      </header>
+
+      <main className="layout">
+        <section className="panel input-panel">
+          <h2>Bug Ticket</h2>
+          <form onSubmit={handleGenerateFix}>
+            <div className="form-group">
+              <label htmlFor="title">Title</label>
+              <input
+                id="title"
+                value={ticket.title}
+                onChange={(e) =>
+                  setTicket((t) => ({ ...t, title: e.target.value }))
+                }
+                placeholder="e.g. Fix export button issue"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                value={ticket.description}
+                onChange={(e) =>
+                  setTicket((t) => ({ ...t, description: e.target.value }))
+                }
+                rows={6}
+                placeholder="Describe the bug in detail..."
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="fileHint">
+                File Hint <span className="optional">(optional)</span>
+              </label>
+              <input
+                id="fileHint"
+                value={fileHint}
+                onChange={(e) => setFileHint(e.target.value)}
+                placeholder="e.g. user_service.py"
+              />
+            </div>
+
+            <div className="settings-divider">
+              <span>Settings</span>
+            </div>
+
+            <div className="form-group">
+              <label>LLM Provider</label>
+              <div className="search-mode-toggle">
+                <button
+                  type="button"
+                  className={`mode-btn ${llmProvider === "local" ? "active" : ""}`}
+                  onClick={() => handleProviderChange("local")}
+                >
+                  Local
+                </button>
+                <button
+                  type="button"
+                  className={`mode-btn ${llmProvider === "cloud" ? "active" : ""}`}
+                  onClick={() => handleProviderChange("cloud")}
+                >
+                  Cloud
+                </button>
+              </div>
+            </div>
+
+            {llmProvider === "local" && (
+              <div className="form-group">
+                <label htmlFor="modelName">Model Name</label>
+                <input
+                  id="modelName"
+                  value={modelName}
+                  onChange={(e) => handleModelInput(e.target.value)}
+                  placeholder="e.g. llama3:8b, deepseek-coder:6.7b"
+                />
+              </div>
+            )}
+
+            {llmProvider === "cloud" && (
+              <>
+                <div className="form-group">
+                  <label>Cloud Service</label>
+                  <div className="search-mode-toggle">
+                    <button
+                      type="button"
+                      className={`mode-btn ${cloudService === "openai" ? "active" : ""}`}
+                      onClick={() => {
+                        setCloudService("openai");
+                        setApiKeyInput("");
+                        setKeySaved(false);
+                      }}
+                    >
+                      OpenAI
+                    </button>
+                    <button
+                      type="button"
+                      className={`mode-btn ${cloudService === "gemini" ? "active" : ""}`}
+                      onClick={() => {
+                        setCloudService("gemini");
+                        setApiKeyInput("");
+                        setKeySaved(false);
+                      }}
+                    >
+                      Gemini
+                    </button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="apiKey">
+                    API Key
+                    {currentKeyHint && (
+                      <span className="key-hint"> ({currentKeyHint})</span>
+                    )}
+                  </label>
+                  <div className="api-key-row">
+                    <input
+                      id="apiKey"
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={(e) => {
+                        setApiKeyInput(e.target.value);
+                        setKeySaved(false);
+                      }}
+                      placeholder={
+                        currentKeyHint
+                          ? `Current: ${currentKeyHint}`
+                          : cloudService === "openai"
+                            ? "sk-..."
+                            : "AI..."
+                      }
+                    />
+                    <button
+                      type="button"
+                      className={`btn btn-save ${keySaved ? "saved" : ""}`}
+                      onClick={handleSaveApiKey}
+                      disabled={!apiKeyInput.trim() || keySaved}
+                    >
+                      {keySaved ? "Saved" : "Save"}
+                    </button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="cloudModel">
+                    Model Name <span className="optional">(optional)</span>
+                  </label>
+                  <input
+                    id="cloudModel"
+                    value={modelName}
+                    onChange={(e) => handleModelInput(e.target.value)}
+                    placeholder={
+                      cloudService === "openai"
+                        ? "default: gpt-4o-mini"
+                        : "default: gemini-1.5-flash"
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="form-group">
+              <label>Search Mode</label>
+              <div className="search-mode-toggle">
+                {(["keyword", "semantic", "hybrid"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`mode-btn ${searchMode === mode ? "active" : ""}`}
+                    onClick={() => handleSearchModeChange(mode)}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="maxFiles">
+                Max Context Files
+                <span className="optional"> (1-20)</span>
+              </label>
+              <div className="stepper">
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() =>
+                    handleMaxContextFilesChange(maxContextFiles - 1)
+                  }
+                  disabled={maxContextFiles <= 1}
+                >
+                  -
+                </button>
+                <input
+                  id="maxFiles"
+                  type="number"
+                  className="stepper-input"
+                  value={maxContextFiles}
+                  min={1}
+                  max={20}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v)) handleMaxContextFilesChange(v);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="stepper-btn"
+                  onClick={() =>
+                    handleMaxContextFilesChange(maxContextFiles + 1)
+                  }
+                  disabled={maxContextFiles >= 20}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading && <span className="spinner-inline" />}
+              {loading ? "Generating..." : "Generate Fix"}
+            </button>
+          </form>
+
+          {result && (
+            <div className="refine-section">
+              <h3>Refine Fix</h3>
+              <p className="refine-hint">
+                Not satisfied? Provide feedback and regenerate.
+              </p>
+              <div className="form-group">
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. The fix should also handle the edge case where..."
+                />
+              </div>
+              <button
+                className="btn btn-secondary btn-full"
+                onClick={handleRefineFix}
+                disabled={refineLoading || !feedback.trim()}
+                type="button"
+              >
+                {refineLoading && <span className="spinner-inline" />}
+                {refineLoading ? "Refining..." : "Refine Fix"}
+              </button>
+            </div>
+          )}
+        </section>
+
+        <section className="panel output-panel">
+          {error && (
+            <div className="error-banner">
+              <strong>Error:</strong> {error}
+              <button
+                className="close-btn"
+                onClick={() => setError("")}
+                type="button"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
+          {!result && !loading && (
+            <div className="empty-state">
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                opacity="0.3"
+              >
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14,2 14,8 20,8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              <p>Submit a bug ticket to generate patches</p>
+            </div>
+          )}
+
+          {(loading || refineLoading) && (
+            <div className="loading-overlay">
+              <div className="spinner" />
+              <p>
+                {refineLoading
+                  ? "Refining patches with your feedback..."
+                  : "Analyzing code and generating fix..."}
+              </p>
+            </div>
+          )}
+
+          {result && (
+            <div className="results">
+              <div className="results-header">
+                <h2>{result.ticket_title}</h2>
+                <div className="results-actions">
+                  <span className="patch-count">
+                    {result.patches.length} file
+                    {result.patches.length !== 1 ? "s" : ""} patched
+                  </span>
+                  <button
+                    className={`btn btn-sm ${showRawJson ? "active" : ""}`}
+                    onClick={() => setShowRawJson(!showRawJson)}
+                    type="button"
+                  >
+                    {showRawJson ? "Hide" : "Show"} JSON
+                  </button>
+                </div>
+              </div>
+
+              <div className="explanation-card">
+                <h3>Explanation</h3>
+                <p>{result.explanation}</p>
+              </div>
+
+              {showRawJson && (
+                <div className="raw-json">
+                  <pre>
+                    <code>{JSON.stringify(result, null, 2)}</code>
+                  </pre>
+                </div>
+              )}
+
+              {result.patches.map((patch, idx) => (
+                <PatchCard
+                  key={`${patch.file_path}-${idx}`}
+                  patch={patch}
+                  defaultExpanded={idx === 0}
+                />
+              ))}
+
+              {result.patches.length === 0 && (
+                <div className="no-patches">
+                  LLM did not return any file patches.
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
+
+      <IndexModal
+        open={showIndexModal}
+        onClose={() => setShowIndexModal(false)}
+        onIndexed={fetchIndex}
+      />
+    </div>
+  );
+}

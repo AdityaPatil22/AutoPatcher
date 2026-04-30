@@ -1,39 +1,39 @@
 import json
 import re
 
-from app.config import (
-    GEMINI_API_KEY,
-    LLM_MODEL,
-    LLM_PROVIDER,
-    LOCAL_LLM_BASE_URL,
-    OPENAI_API_KEY,
-)
+import app.config as config
 
 
 def call_llm(messages: list[dict]) -> dict:
     """
     Call the configured LLM provider and return parsed JSON response.
-    Supports OpenAI, Google Gemini, and local models (Ollama, LM Studio, etc.).
+    Provider is either "local" (Ollama, LM Studio, etc.) or "cloud" (OpenAI / Gemini).
     """
-    if LLM_PROVIDER == "gemini":
-        raw = _call_gemini(messages)
-    elif LLM_PROVIDER == "local":
+    if config.LLM_PROVIDER == "local":
         raw = _call_local(messages)
     else:
-        raw = _call_openai(messages)
+        raw = _call_cloud(messages)
 
     return _parse_response(raw)
+
+
+def _call_cloud(messages: list[dict]) -> str:
+    if config.GEMINI_API_KEY:
+        return _call_gemini(messages)
+    if config.OPENAI_API_KEY:
+        return _call_openai(messages)
+    raise RuntimeError(
+        "No cloud API key configured. Set OPENAI_API_KEY or GEMINI_API_KEY in your .env file."
+    )
 
 
 def _call_openai(messages: list[dict]) -> str:
     from openai import OpenAI
 
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file.")
-
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(api_key=config.OPENAI_API_KEY)
+    model = config.LLM_MODEL or "gpt-4o-mini"
     response = client.chat.completions.create(
-        model=LLM_MODEL,
+        model=model,
         messages=messages,
         temperature=0.2,
         response_format={"type": "json_object"},
@@ -44,10 +44,11 @@ def _call_openai(messages: list[dict]) -> str:
 def _call_local(messages: list[dict]) -> str:
     from openai import OpenAI
 
-    client = OpenAI(base_url=LOCAL_LLM_BASE_URL, api_key="not-needed")
+    client = OpenAI(base_url=config.LOCAL_LLM_BASE_URL, api_key="not-needed")
+    model = config.LLM_MODEL or "llama3:8b"
 
     kwargs: dict = dict(
-        model=LLM_MODEL,
+        model=model,
         messages=messages,
         temperature=0.2,
         max_tokens=4096,
@@ -65,11 +66,8 @@ def _call_local(messages: list[dict]) -> str:
 def _call_gemini(messages: list[dict]) -> str:
     import google.generativeai as genai
 
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY is not set. Add it to your .env file.")
-
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel(LLM_MODEL or "gemini-1.5-flash")
+    genai.configure(api_key=config.GEMINI_API_KEY)
+    model = genai.GenerativeModel(config.LLM_MODEL or "gemini-1.5-flash")
 
     prompt_parts = []
     for msg in messages:

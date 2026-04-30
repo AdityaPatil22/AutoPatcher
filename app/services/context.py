@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from app.config import MAX_CONTEXT_FILES, SAMPLE_REPO_PATH, SEARCH_MODE
+import app.config as config
 
 SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".rs",
@@ -16,10 +16,13 @@ SKIP_DIRS = {
 
 
 def search_files(query: str, file_hint: str | None = None) -> list[dict]:
+    if not config.SAMPLE_REPO_PATH:
+        return []
+
     keywords = _extract_keywords(query)
     results = []
 
-    for root, dirs, files in os.walk(SAMPLE_REPO_PATH):
+    for root, dirs, files in os.walk(config.SAMPLE_REPO_PATH):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
         for filename in files:
@@ -126,22 +129,22 @@ def search_files_hybrid(query: str, file_hint: str | None = None) -> list[dict]:
 
 
 def get_best_context(query: str, file_hint: str | None = None) -> dict:
-    if SEARCH_MODE == "semantic":
+    if config.SEARCH_MODE == "semantic":
         results = search_files_semantic(query, file_hint)
-    elif SEARCH_MODE == "hybrid":
+    elif config.SEARCH_MODE == "hybrid":
         results = search_files_hybrid(query, file_hint)
     else:
         results = search_files(query, file_hint)
 
     if not results and file_hint:
-        if SEARCH_MODE == "semantic":
+        if config.SEARCH_MODE == "semantic":
             results = search_files_semantic(query)
-        elif SEARCH_MODE == "hybrid":
+        elif config.SEARCH_MODE == "hybrid":
             results = search_files_hybrid(query)
         else:
             results = search_files(query)
 
-    if not results and SEARCH_MODE != "keyword":
+    if not results and config.SEARCH_MODE != "keyword":
         results = search_files(query, file_hint)
         if not results and file_hint:
             results = search_files(query)
@@ -157,24 +160,24 @@ def get_top_contexts(
     max_files: int | None = None,
 ) -> list[dict]:
     if max_files is None:
-        max_files = MAX_CONTEXT_FILES
+        max_files = config.MAX_CONTEXT_FILES
 
-    if SEARCH_MODE == "semantic":
+    if config.SEARCH_MODE == "semantic":
         results = search_files_semantic(query, file_hint)
-    elif SEARCH_MODE == "hybrid":
+    elif config.SEARCH_MODE == "hybrid":
         results = search_files_hybrid(query, file_hint)
     else:
         results = search_files(query, file_hint)
 
     if not results and file_hint:
-        if SEARCH_MODE == "semantic":
+        if config.SEARCH_MODE == "semantic":
             results = search_files_semantic(query)
-        elif SEARCH_MODE == "hybrid":
+        elif config.SEARCH_MODE == "hybrid":
             results = search_files_hybrid(query)
         else:
             results = search_files(query)
 
-    if not results and SEARCH_MODE != "keyword":
+    if not results and config.SEARCH_MODE != "keyword":
         results = search_files(query, file_hint)
         if not results and file_hint:
             results = search_files(query)

@@ -41,22 +41,182 @@ with st.sidebar:
         st.error("Backend not connected")
         stats = {"indexed": False}
 
+    repo_path = st.text_input(
+        "Repository Path",
+        placeholder="/path/to/your/project",
+        help="Enter the full path to the repository you want to index.",
+    )
+
     if st.button("Index Repository", use_container_width=True):
-        with st.spinner("Indexing repository..."):
-            try:
-                resp = requests.post(f"{API_URL}/index", timeout=300)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    st.success(
-                        f"Indexed {data['files_indexed']} files "
-                        f"({data['chunks_created']} chunks)"
+        if not repo_path:
+            st.error("Please enter a repository path.")
+        else:
+            with st.spinner("Indexing repository..."):
+                try:
+                    resp = requests.post(
+                        f"{API_URL}/index",
+                        json={"repo_path": repo_path},
+                        timeout=300,
                     )
-                else:
-                    st.error(f"Indexing failed: {resp.text}")
-            except requests.ConnectionError:
-                st.error("Cannot connect to backend")
-            except Exception as e:
-                st.error(f"Error: {e}")
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        st.success(
+                            f"Indexed {data['files_indexed']} files "
+                            f"({data['chunks_created']} chunks)"
+                        )
+                    else:
+                        detail = resp.json().get("detail", resp.text)
+                        st.error(f"Indexing failed: {detail}")
+                except requests.ConnectionError:
+                    st.error("Cannot connect to backend")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    st.divider()
+
+    try:
+        settings_resp = requests.get(f"{API_URL}/settings", timeout=5)
+        settings = settings_resp.json() if settings_resp.status_code == 200 else {}
+    except Exception:
+        settings = {}
+
+    st.header("LLM Provider")
+
+    current_provider = settings.get("provider", "local")
+    providers = ["local", "cloud"]
+    provider_idx = providers.index(current_provider) if current_provider in providers else 0
+    selected_provider = st.radio(
+        "Select LLM provider",
+        providers,
+        index=provider_idx,
+        horizontal=True,
+        help="Local: Ollama / LM Studio. Cloud: OpenAI or Gemini.",
+    )
+    if selected_provider != current_provider:
+        try:
+            requests.put(
+                f"{API_URL}/settings/provider",
+                json={"provider": selected_provider},
+                timeout=5,
+            )
+            st.success(f"Provider set to **{selected_provider}**")
+        except Exception:
+            st.error("Failed to update provider")
+
+    if selected_provider == "local":
+        current_model = settings.get("model", "")
+        model_name = st.text_input(
+            "Model Name",
+            value=current_model,
+            placeholder="e.g. llama3:8b",
+            help="The model name for your local LLM server.",
+        )
+        if model_name and model_name != current_model:
+            try:
+                requests.put(
+                    f"{API_URL}/settings/model",
+                    json={"model": model_name},
+                    timeout=5,
+                )
+            except Exception:
+                st.error("Failed to update model")
+
+    if selected_provider == "cloud":
+        cloud_services = ["openai", "gemini"]
+        current_backend = settings.get("cloud_backend") or "openai"
+        cloud_idx = cloud_services.index(current_backend) if current_backend in cloud_services else 0
+        cloud_svc = st.radio(
+            "Cloud Service",
+            cloud_services,
+            index=cloud_idx,
+            horizontal=True,
+            format_func=lambda x: x.capitalize(),
+        )
+
+        key_field = "openai_key_hint" if cloud_svc == "openai" else "gemini_key_hint"
+        current_hint = settings.get(key_field, "")
+        hint_text = f"Current: {current_hint}" if current_hint else ""
+        if hint_text:
+            st.caption(hint_text)
+
+        api_key = st.text_input(
+            "API Key",
+            type="password",
+            placeholder="sk-..." if cloud_svc == "openai" else "AI...",
+            help="Enter your API key. It will be stored in memory for this session.",
+        )
+        if st.button("Save API Key", use_container_width=True):
+            if api_key:
+                try:
+                    requests.put(
+                        f"{API_URL}/settings/api-key",
+                        json={"service": cloud_svc, "api_key": api_key},
+                        timeout=5,
+                    )
+                    st.success("API key saved!")
+                except Exception:
+                    st.error("Failed to save API key")
+            else:
+                st.warning("Please enter an API key.")
+
+        current_model = settings.get("model", "")
+        default_hint = "gpt-4o-mini" if cloud_svc == "openai" else "gemini-1.5-flash"
+        cloud_model = st.text_input(
+            "Model Name (optional)",
+            value=current_model,
+            placeholder=f"default: {default_hint}",
+        )
+        if cloud_model and cloud_model != current_model:
+            try:
+                requests.put(
+                    f"{API_URL}/settings/model",
+                    json={"model": cloud_model},
+                    timeout=5,
+                )
+            except Exception:
+                st.error("Failed to update model")
+
+    st.divider()
+    st.header("Search Mode")
+
+    current_mode = settings.get("search_mode", "hybrid")
+    modes = ["keyword", "semantic", "hybrid"]
+    selected_mode = st.radio(
+        "Select how code is searched",
+        modes,
+        index=modes.index(current_mode) if current_mode in modes else 2,
+        horizontal=True,
+        help="Keyword: exact text matching. Semantic: embedding-based. Hybrid: both combined.",
+    )
+    if selected_mode != current_mode:
+        try:
+            requests.put(f"{API_URL}/settings/search-mode", json={"mode": selected_mode}, timeout=5)
+            st.success(f"Search mode set to **{selected_mode}**")
+        except Exception:
+            st.error("Failed to update search mode")
+
+    st.divider()
+    st.header("Max Context Files")
+
+    current_max = settings.get("max_context_files", 3)
+    selected_max = st.number_input(
+        "Files to include as context",
+        min_value=1,
+        max_value=20,
+        value=current_max,
+        step=1,
+        help="How many source files to send to the LLM for each fix.",
+    )
+    if selected_max != current_max:
+        try:
+            requests.put(
+                f"{API_URL}/settings/max-context-files",
+                json={"max_files": selected_max},
+                timeout=5,
+            )
+            st.success(f"Max context files set to **{selected_max}**")
+        except Exception:
+            st.error("Failed to update max context files")
 
     st.divider()
     st.caption(

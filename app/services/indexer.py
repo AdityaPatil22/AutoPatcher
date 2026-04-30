@@ -4,7 +4,7 @@ from pathlib import Path
 
 import chromadb
 
-from app.config import CHROMA_PERSIST_DIR, SAMPLE_REPO_PATH
+from app.config import CHROMA_PERSIST_DIR
 from app.services.context import SKIP_DIRS, SUPPORTED_EXTENSIONS
 
 CHUNK_SIZE = 60
@@ -51,7 +51,7 @@ def _make_chunk_id(filepath: str, start_line: int) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def index_repository() -> dict:
+def index_repository(repo_path: Path) -> dict:
     collection = _get_collection()
 
     existing_ids = collection.get()["ids"]
@@ -63,7 +63,7 @@ def index_repository() -> dict:
     metadatas = []
     files_indexed = 0
 
-    for root, dirs, files in os.walk(SAMPLE_REPO_PATH):
+    for root, dirs, files in os.walk(repo_path):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
         for filename in files:
