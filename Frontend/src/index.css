@@ -57,3 +57,31 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-light);
 }
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f6f8fa;
+  --surface-hover: #eef1f4;
+  --border: #d0d7de;
+  --border-light: #b8c0c8;
+  --text: #1f2328;
+  --text-muted: #656d76;
+  --text-dim: #8b949e;
+  --primary: #0969da;
+  --primary-hover: #0550ae;
+  --primary-bg: rgba(9, 105, 218, 0.1);
+  --green: #1a7f37;
+  --green-bg: rgba(26, 127, 55, 0.1);
+  --red: #cf222e;
+  --red-bg: rgba(207, 34, 46, 0.08);
+  --yellow: #9a6700;
+  --yellow-bg: rgba(154, 103, 0, 0.1);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
