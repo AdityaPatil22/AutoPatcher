@@ -9,7 +9,7 @@ Bug Ticket → Context Search → LLM Prompt → Patch (diff)
 ```
 
 1. **Input** a bug report (title + description) via the React frontend
-2. **Context fetch** searches the indexed repository using keyword, semantic, or hybrid search
+2. **Context fetch** searches the indexed repository using hybrid (keyword + semantic) search
 3. **Prompt builder** constructs a structured prompt with the bug + relevant code
 4. **LLM** (local via Ollama, OpenAI, or Gemini) analyzes the bug and returns fixed code
 5. **Diff generator** produces a unified diff showing exactly what changed
@@ -39,6 +39,40 @@ npm run dev
 ```
 
 The frontend runs at `http://localhost:5173` and proxies API calls to the backend at `http://localhost:8000`.
+
+## Container Deployment (Podman)
+
+```bash
+# Build the image
+podman build -t autopatch-ai .
+
+# Run with a local LLM (Ollama running on host)
+podman run -d --name autopatch -p 8000:8000 \
+  -v autopatch-chroma:/app/.chroma_index \
+  -e LLM_PROVIDER=local \
+  -e LOCAL_LLM_BASE_URL=http://host.containers.internal:11434/v1 \
+  autopatch-ai
+
+# Run with a cloud LLM and a repo to analyze
+podman run -d --name autopatch -p 8000:8000 \
+  -v autopatch-chroma:/app/.chroma_index \
+  -v /path/to/repo:/repo:ro \
+  -e LLM_PROVIDER=cloud \
+  -e OPENAI_API_KEY=sk-... \
+  -e SAMPLE_REPO_PATH=/repo \
+  autopatch-ai
+```
+
+The app is available at `http://localhost:8000`. ChromaDB data persists in the `autopatch-chroma` named volume.
+
+To pass many environment variables at once, use `--env-file`:
+
+```bash
+podman run -d --name autopatch -p 8000:8000 \
+  -v autopatch-chroma:/app/.chroma_index \
+  --env-file Backend/.env \
+  autopatch-ai
+```
 
 ## API Usage
 
@@ -114,7 +148,7 @@ AutoPatch-AI/
 │       │   ├── index.py         # /index endpoints
 │       │   └── settings.py      # /settings endpoints
 │       ├── services/
-│       │   ├── context.py       # Code search (keyword/semantic/hybrid)
+│       │   ├── context.py       # Hybrid code search with fallbacks
 │       │   ├── indexer.py       # ChromaDB semantic indexing
 │       │   ├── prompt.py        # LLM prompt builder
 │       │   └── llm.py           # LLM provider calls (local/OpenAI/Gemini)
@@ -133,6 +167,7 @@ AutoPatch-AI/
 │           ├── PatchCard.tsx     # Patch display with diff viewer
 │           ├── FileTree.tsx      # Indexed file explorer
 │           └── IndexModal.tsx    # Repository indexing modal
+├── Containerfile                # Multi-stage Podman/Docker build
 └── README.md
 ```
 
@@ -148,7 +183,6 @@ Copy `Backend/.env.example` to `Backend/.env` and set your values:
 | `LLM_MODEL`          | —                            | Model name (e.g. `llama3:8b`, `gpt-4o-mini`) |
 | `LOCAL_LLM_BASE_URL` | `http://localhost:11434/v1`  | Base URL for local LLM server (Ollama)    |
 | `SAMPLE_REPO_PATH`   | —                            | Path to a repository to auto-index        |
-| `SEARCH_MODE`        | `hybrid`                     | `keyword`, `semantic`, or `hybrid`        |
 | `MAX_CONTEXT_FILES`  | `3`                          | Number of files to include as context     |
 | `CHROMA_PERSIST_DIR` | `./.chroma_index`            | ChromaDB vector store location            |
 
