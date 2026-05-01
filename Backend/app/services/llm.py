@@ -1,3 +1,5 @@
+"""LLM integration layer: call providers, parse responses, and sanitize code output."""
+
 import json
 import re
 
@@ -5,10 +7,7 @@ import app.config as config
 
 
 def call_llm(messages: list[dict]) -> dict:
-    """
-    Call the configured LLM provider and return parsed JSON response.
-    Provider is either "local" (Ollama, LM Studio, etc.) or "cloud" (OpenAI / Gemini).
-    """
+    """Call the configured LLM provider and return parsed JSON response."""
     if config.LLM_PROVIDER == "local":
         raw = _call_local(messages)
     else:
@@ -18,6 +17,7 @@ def call_llm(messages: list[dict]) -> dict:
 
 
 def _call_cloud(messages: list[dict]) -> str:
+    """Route to the appropriate cloud provider based on available API keys."""
     if config.GEMINI_API_KEY:
         return _call_gemini(messages)
     if config.OPENAI_API_KEY:
@@ -28,6 +28,7 @@ def _call_cloud(messages: list[dict]) -> str:
 
 
 def _call_openai(messages: list[dict]) -> str:
+    """Send messages to the OpenAI API and return the raw text response."""
     from openai import OpenAI
 
     client = OpenAI(api_key=config.OPENAI_API_KEY)
@@ -42,6 +43,7 @@ def _call_openai(messages: list[dict]) -> str:
 
 
 def _call_local(messages: list[dict]) -> str:
+    """Send messages to a local LLM server (Ollama, LM Studio, etc.) via OpenAI-compatible API."""
     from openai import OpenAI
 
     client = OpenAI(base_url=config.LOCAL_LLM_BASE_URL, api_key="not-needed")
@@ -64,6 +66,7 @@ def _call_local(messages: list[dict]) -> str:
 
 
 def _call_gemini(messages: list[dict]) -> str:
+    """Send messages to the Google Gemini API and return the raw text response."""
     import google.generativeai as genai
 
     genai.configure(api_key=config.GEMINI_API_KEY)
@@ -113,7 +116,7 @@ def _sanitize_code(code) -> str:
 
 
 def _sanitize_result(result: dict) -> dict:
-    """Sanitize all code strings in the parsed LLM result."""
+    """Recursively sanitize all code strings in the parsed LLM result."""
     if "fixed_code" in result:
         result["fixed_code"] = _sanitize_code(result["fixed_code"])
 
@@ -134,7 +137,7 @@ def _sanitize_result(result: dict) -> dict:
 
 
 def _parse_response(raw) -> dict:
-    """Parse the LLM response, handling common formatting issues."""
+    """Parse raw LLM text into a dict, handling JSON fences, partial extraction, and fallbacks."""
     if raw is None:
         raw = ""
     if isinstance(raw, list):

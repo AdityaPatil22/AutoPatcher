@@ -1,3 +1,5 @@
+"""ChromaDB-based code indexing and semantic search."""
+
 import hashlib
 import os
 from pathlib import Path
@@ -5,13 +7,14 @@ from pathlib import Path
 import chromadb
 
 from app.config import CHROMA_PERSIST_DIR
-from app.services.context import SKIP_DIRS, SUPPORTED_EXTENSIONS
+from app.constants import SKIP_DIRS, SUPPORTED_EXTENSIONS
 
 CHUNK_SIZE = 60
 CHUNK_OVERLAP = 10
 
 
 def _get_collection():
+    """Get or create the ChromaDB collection for code chunks."""
     client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
     return client.get_or_create_collection(
         name="autopatch_code",
@@ -20,6 +23,7 @@ def _get_collection():
 
 
 def _chunk_file(content: str, filepath: str) -> list[dict]:
+    """Split a file's content into overlapping line-based chunks for embedding."""
     lines = content.split("\n")
     chunks = []
 
@@ -47,11 +51,13 @@ def _chunk_file(content: str, filepath: str) -> list[dict]:
 
 
 def _make_chunk_id(filepath: str, start_line: int) -> str:
+    """Generate a deterministic short hash ID for a file chunk."""
     raw = f"{filepath}:{start_line}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def index_repository(repo_path: Path) -> dict:
+    """Index all supported files in a repository into ChromaDB for semantic search."""
     collection = _get_collection()
 
     existing_ids = collection.get()["ids"]
@@ -107,6 +113,7 @@ def index_repository(repo_path: Path) -> dict:
 
 
 def search_semantic(query: str, top_k: int = 10) -> list[dict]:
+    """Query ChromaDB for the top-k most similar code chunks to the query text."""
     collection = _get_collection()
 
     if collection.count() == 0:
@@ -132,6 +139,7 @@ def search_semantic(query: str, top_k: int = 10) -> list[dict]:
 
 
 def is_indexed() -> bool:
+    """Check whether any code has been indexed in ChromaDB."""
     try:
         return _get_collection().count() > 0
     except Exception:
@@ -139,6 +147,7 @@ def is_indexed() -> bool:
 
 
 def get_index_stats() -> dict:
+    """Return index status and total chunk count."""
     try:
         collection = _get_collection()
         return {"indexed": collection.count() > 0, "total_chunks": collection.count()}
@@ -147,6 +156,7 @@ def get_index_stats() -> dict:
 
 
 def get_indexed_files() -> list[str]:
+    """Return a sorted list of all indexed file paths."""
     try:
         collection = _get_collection()
         if collection.count() == 0:

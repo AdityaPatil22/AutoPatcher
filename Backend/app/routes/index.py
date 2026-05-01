@@ -1,21 +1,21 @@
+"""Routes for repository indexing and file tree retrieval."""
+
 import os
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
 import app.config as config
+from app.models import IndexRequest
 from app.services.indexer import get_index_stats, get_indexed_files, index_repository
+from app.utils.tree import build_file_tree
 
 router = APIRouter(tags=["index"])
 
 
-class IndexRequest(BaseModel):
-    repo_path: str = Field(..., min_length=1)
-
-
 @router.post("/index")
 def index_repo(req: IndexRequest):
+    """Index a repository directory for code search."""
     repo = Path(req.repo_path).expanduser().resolve()
     if not repo.is_dir():
         raise HTTPException(status_code=400, detail=f"Directory not found: {repo}")
@@ -33,11 +33,13 @@ def index_repo(req: IndexRequest):
 
 @router.get("/index/status")
 def index_status():
+    """Return current index stats (whether indexed and chunk count)."""
     return get_index_stats()
 
 
 @router.get("/index/files")
 def index_files():
+    """Return the indexed file tree with relative paths."""
     raw_paths = get_indexed_files()
     if not raw_paths:
         return {"tree": [], "total_files": 0}
@@ -47,31 +49,5 @@ def index_files():
 
     relative = [p[len(prefix):] if p.startswith(prefix) else p for p in raw_paths]
 
-    tree = _build_tree(sorted(relative))
+    tree = build_file_tree(sorted(relative))
     return {"tree": tree, "total_files": len(raw_paths), "root": prefix}
-
-
-def _build_tree(paths: list[str]) -> list[dict]:
-    root: dict = {}
-    for path in paths:
-        parts = path.split("/")
-        node = root
-        for part in parts:
-            if part not in node:
-                node[part] = {}
-            node = node[part]
-
-    def to_list(node: dict, name: str = "") -> list[dict]:
-        items = []
-        for key, children in sorted(node.items()):
-            if children:
-                items.append({
-                    "name": key,
-                    "type": "folder",
-                    "children": to_list(children, key),
-                })
-            else:
-                items.append({"name": key, "type": "file"})
-        return items
-
-    return to_list(root)

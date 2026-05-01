@@ -1,7 +1,10 @@
+"""Apply search/replace code changes with multi-pass fuzzy matching."""
+
 import re
 
 
 def _to_str(val) -> str:
+    """Coerce a value to a string, joining lists with newlines."""
     if isinstance(val, list):
         return "\n".join(str(item) for item in val)
     return str(val) if val else ""
@@ -20,6 +23,7 @@ def _strip_line_numbers(text: str) -> str:
 
 
 def apply_changes(content: str, changes: list[dict]) -> str:
+    """Apply a list of search/replace changes to file content, using fuzzy matching as fallback."""
     result = content
     for change in changes:
         original = _to_str(change.get("original", ""))
@@ -42,10 +46,12 @@ def apply_changes(content: str, changes: list[dict]) -> str:
 
 
 def _normalize(line: str) -> str:
+    """Normalize a line for comparison by stripping whitespace and converting tabs."""
     return line.strip().replace("\t", "    ")
 
 
 def _fuzzy_replace(content: str, original: str, modified: str) -> str | None:
+    """Try multiple fuzzy strategies to locate and replace original lines in content."""
     orig_lines = [l for l in original.strip().split("\n") if l.strip()]
     if not orig_lines:
         return None

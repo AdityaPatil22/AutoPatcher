@@ -1,3 +1,5 @@
+"""System prompts and message builders for LLM-based code fixing."""
+
 from pathlib import Path
 
 EXTENSION_TO_LANGUAGE = {
@@ -50,17 +52,20 @@ General rules:
 
 
 def _lang_for_file(filename: str) -> str:
+    """Map a filename to its language identifier for syntax highlighting."""
     ext = Path(filename).suffix.lower()
     return EXTENSION_TO_LANGUAGE.get(ext, "")
 
 
 def _add_line_numbers(content: str) -> str:
+    """Prefix each line of code with its line number for LLM reference."""
     lines = content.split("\n")
     width = len(str(len(lines)))
     return "\n".join(f"{i + 1:>{width}} | {line}" for i, line in enumerate(lines))
 
 
 def build_prompt(ticket: dict, contexts: list[dict]) -> list[dict]:
+    """Build the initial system + user messages for a bug fix request."""
     files_section = ""
     for ctx in contexts:
         filename = ctx["filename"]
@@ -92,6 +97,7 @@ def build_refine_prompt(
     previous_patches: list[dict],
     feedback: str,
 ) -> list[dict]:
+    """Build a multi-turn conversation for refining a previous fix with user feedback."""
     files_section = ""
     for ctx in contexts:
         filename = ctx["filename"]

@@ -1,3 +1,5 @@
+"""Generate unified diffs between original and fixed code."""
+
 import difflib
 
 
