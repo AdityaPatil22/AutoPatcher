@@ -5,9 +5,8 @@ import {
   setMaxContextFiles,
   setModel,
   setProvider,
-  setSearchMode,
 } from "../api/settings";
-import type { CloudService, LLMProvider, SearchMode } from "../types";
+import type { CloudService, LLMProvider } from "../types";
 
 export function useSettings() {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("local");
@@ -17,7 +16,6 @@ export function useSettings() {
   const [openaiKeyHint, setOpenaiKeyHint] = useState("");
   const [geminiKeyHint, setGeminiKeyHint] = useState("");
   const [keySaved, setKeySaved] = useState(false);
-  const [searchMode, setSearchModeState] = useState<SearchMode>("hybrid");
   const [maxContextFiles, setMaxContextFilesState] = useState(3);
 
   const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -25,7 +23,6 @@ export function useSettings() {
   const fetchSettings = useCallback(async () => {
     try {
       const s = await getSettings();
-      setSearchModeState(s.search_mode);
       setMaxContextFilesState(s.max_context_files);
       setLlmProvider(s.provider);
       setModelName(s.model);
@@ -87,15 +84,6 @@ export function useSettings() {
     setKeySaved(false);
   }
 
-  async function handleSearchModeChange(mode: SearchMode) {
-    setSearchModeState(mode);
-    try {
-      await setSearchMode(mode);
-    } catch {
-      await fetchSettings();
-    }
-  }
-
   async function handleMaxContextFilesChange(value: number) {
     if (value < 1 || value > 20) return;
     setMaxContextFilesState(value);
@@ -117,14 +105,12 @@ export function useSettings() {
     setApiKeyInput,
     currentKeyHint,
     keySaved,
-    searchMode,
     maxContextFiles,
     fetchSettings,
     handleProviderChange,
     handleModelInput,
     handleSaveApiKey,
     handleCloudServiceChange,
-    handleSearchModeChange,
     handleMaxContextFilesChange,
   } as const;
 }

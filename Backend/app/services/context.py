@@ -1,4 +1,4 @@
-"""Orchestrates code search across keyword, semantic, and hybrid strategies with fallback chains."""
+"""Orchestrates hybrid code search with fallback chains."""
 
 import os
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import app.config as config
 from app.constants import SKIP_DIRS
 from app.services.search_keyword import extract_file_references, search_files
-from app.services.search_semantic import search_files_hybrid, search_files_semantic
+from app.services.search_semantic import search_files_hybrid
 
 
 def get_top_contexts(
@@ -36,23 +36,13 @@ def get_top_contexts(
 
 
 def _search_with_fallback(query: str, file_hint: str | None) -> list[dict]:
-    """Run the configured search strategy, falling back through hint removal and keyword search."""
-    if config.SEARCH_MODE == "semantic":
-        results = search_files_semantic(query, file_hint)
-    elif config.SEARCH_MODE == "hybrid":
-        results = search_files_hybrid(query, file_hint)
-    else:
-        results = search_files(query, file_hint)
+    """Run hybrid search, falling back through hint removal and keyword search."""
+    results = search_files_hybrid(query, file_hint)
 
     if not results and file_hint:
-        if config.SEARCH_MODE == "semantic":
-            results = search_files_semantic(query)
-        elif config.SEARCH_MODE == "hybrid":
-            results = search_files_hybrid(query)
-        else:
-            results = search_files(query)
+        results = search_files_hybrid(query)
 
-    if not results and config.SEARCH_MODE != "keyword":
+    if not results:
         results = search_files(query, file_hint)
         if not results and file_hint:
             results = search_files(query)

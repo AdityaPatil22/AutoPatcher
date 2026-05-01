@@ -16,13 +16,11 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
     setApiKeyInput,
     currentKeyHint,
     keySaved,
-    searchMode,
     maxContextFiles,
     handleProviderChange,
     handleModelInput,
     handleSaveApiKey,
     handleCloudServiceChange,
-    handleSearchModeChange,
     handleMaxContextFilesChange,
   } = settings;
 
@@ -184,21 +182,6 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
           </>
         )}
 
-        <div className="form-group">
-          <label>Search Mode</label>
-          <div className="search-mode-toggle">
-            {(["keyword", "semantic", "hybrid"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={`mode-btn ${searchMode === mode ? "active" : ""}`}
-                onClick={() => handleSearchModeChange(mode)}
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="form-group">
           <label htmlFor="maxFiles">
             Max Context Files

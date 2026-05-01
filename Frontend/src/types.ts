@@ -26,7 +26,6 @@ export interface RefineInput {
   previous_patches: FilePatch[];
 }
 
-export type SearchMode = "keyword" | "semantic" | "hybrid";
 export type LLMProvider = "local" | "cloud";
 export type CloudService = "openai" | "gemini";
 
@@ -39,7 +38,6 @@ export interface Settings {
   gemini_key_set: boolean;
   openai_key_hint: string;
   gemini_key_hint: string;
-  search_mode: SearchMode;
   max_context_files: number;
   repo_path: string | null;
 }

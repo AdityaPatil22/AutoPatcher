@@ -17,12 +17,6 @@ class CloudServiceEnum(str, Enum):
     gemini = "gemini"
 
 
-class SearchModeEnum(str, Enum):
-    """Code search strategies."""
-    keyword = "keyword"
-    semantic = "semantic"
-    hybrid = "hybrid"
-
 
 class TicketInput(BaseModel):
     """Input for generating a bug fix from a ticket description."""
@@ -83,11 +77,6 @@ class ApiKeyRequest(BaseModel):
     """Request to set a cloud API key."""
     service: CloudServiceEnum
     api_key: str = Field(..., min_length=1)
-
-
-class SearchModeRequest(BaseModel):
-    """Request to change the code search strategy."""
-    mode: SearchModeEnum
 
 
 class MaxContextFilesRequest(BaseModel):

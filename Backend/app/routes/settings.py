@@ -1,4 +1,4 @@
-"""Settings routes for configuring LLM provider, model, API keys, and search mode."""
+"""Settings routes for configuring LLM provider, model, and API keys."""
 
 from fastapi import APIRouter
 
@@ -9,7 +9,6 @@ from app.models import (
     MaxContextFilesRequest,
     ModelRequest,
     ProviderRequest,
-    SearchModeRequest,
 )
 
 router = APIRouter(tags=["settings"])
@@ -24,7 +23,7 @@ def _mask_key(key: str) -> str:
 
 @router.get("/settings")
 def get_settings():
-    """Return current settings including provider, model, keys, and search config."""
+    """Return current settings including provider, model, and keys."""
     has_openai = bool(config.OPENAI_API_KEY)
     has_gemini = bool(config.GEMINI_API_KEY)
 
@@ -44,7 +43,6 @@ def get_settings():
         "gemini_key_set": has_gemini,
         "openai_key_hint": _mask_key(config.OPENAI_API_KEY),
         "gemini_key_hint": _mask_key(config.GEMINI_API_KEY),
-        "search_mode": config.SEARCH_MODE,
         "max_context_files": config.MAX_CONTEXT_FILES,
         "repo_path": str(config.SAMPLE_REPO_PATH) if config.SAMPLE_REPO_PATH else None,
     }
@@ -75,13 +73,6 @@ def set_api_key(req: ApiKeyRequest):
         "service": req.service.value,
         "key_hint": _mask_key(req.api_key),
     }
-
-
-@router.put("/settings/search-mode")
-def set_search_mode(req: SearchModeRequest):
-    """Update the code search strategy (keyword, semantic, or hybrid)."""
-    config.SEARCH_MODE = req.mode.value
-    return {"search_mode": config.SEARCH_MODE}
 
 
 @router.put("/settings/max-context-files")
