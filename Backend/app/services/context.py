@@ -20,6 +20,7 @@ def search_files(query: str, file_hint: str | None = None) -> list[dict]:
         return []
 
     keywords = _extract_keywords(query)
+    file_refs = _extract_file_references(query)
     results = []
 
     for root, dirs, files in os.walk(config.SAMPLE_REPO_PATH):
@@ -36,7 +37,7 @@ def search_files(query: str, file_hint: str | None = None) -> list[dict]:
                 continue
 
             content = filepath.read_text(encoding="utf-8")
-            score = _score_relevance(content, keywords)
+            score = _score_relevance(content, keywords, str(filepath), file_refs)
 
             if score > 0:
                 results.append({
@@ -57,6 +58,8 @@ def search_files_semantic(query: str, file_hint: str | None = None) -> list[dict
     if not hits:
         return []
 
+    file_refs = _extract_file_references(query)
+
     seen = {}
     for hit in hits:
         fp = hit["filepath"]
@@ -73,6 +76,16 @@ def search_files_semantic(query: str, file_hint: str | None = None) -> list[dict
             continue
 
         score = max(0, 2 - hit["distance"])
+
+        if file_refs:
+            fp_lower = fp.lower()
+            fname_lower = hit["filename"].lower()
+            for ref in file_refs:
+                ref_lower = ref.lower()
+                ref_base = Path(ref).name.lower()
+                if ref_base == fname_lower or ref_lower in fp_lower or fp_lower.endswith(ref_lower):
+                    score += 1000
+
         results.append({
             "path": fp,
             "filename": hit["filename"],
@@ -154,6 +167,44 @@ def get_best_context(query: str, file_hint: str | None = None) -> dict:
     return {"path": "", "filename": "", "content": "No relevant code found.", "score": 0}
 
 
+def _find_referenced_files(query: str) -> list[dict]:
+    """Directly locate files mentioned by path in the query text."""
+    file_refs = _extract_file_references(query)
+    if not file_refs or not config.CHROMA_PERSIST_DIR:
+        return []
+
+    from app.services.indexer import get_indexed_files
+    indexed = get_indexed_files()
+    if not indexed:
+        return []
+    repo_path = os.path.commonpath(indexed)
+
+    found = []
+    for ref in file_refs:
+        ref_base = Path(ref).name
+
+        for root, dirs, files in os.walk(repo_path):
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            for filename in files:
+                if filename == ref_base:
+                    filepath = Path(root) / filename
+                    fp_str = str(filepath)
+                    if ref.count("/") > 0 and ref.lower() not in fp_str.lower():
+                        continue
+                    try:
+                        content = filepath.read_text(encoding="utf-8")
+                    except (FileNotFoundError, UnicodeDecodeError):
+                        continue
+                    found.append({
+                        "path": fp_str,
+                        "filename": filename,
+                        "content": content,
+                        "score": 2000,
+                    })
+
+    return found
+
+
 def get_top_contexts(
     query: str,
     file_hint: str | None = None,
@@ -182,7 +233,34 @@ def get_top_contexts(
         if not results and file_hint:
             results = search_files(query)
 
+    direct_hits = _find_referenced_files(query)
+    if direct_hits:
+        seen_paths = {r["path"] for r in results}
+        for hit in direct_hits:
+            if hit["path"] not in seen_paths:
+                results.insert(0, hit)
+            else:
+                for r in results:
+                    if r["path"] == hit["path"]:
+                        r["score"] = max(r["score"], hit["score"])
+        results.sort(key=lambda x: x["score"], reverse=True)
+
     return results[:max_files]
+
+
+def _extract_file_references(text: str) -> list[str]:
+    """Extract file path or filename references from bug description text."""
+    import re
+    patterns = [
+        re.compile(r'[\w./\-\[\]]+\.(?:' + '|'.join(
+            ext.lstrip('.') for ext in SUPPORTED_EXTENSIONS
+        ) + r')', re.IGNORECASE),
+    ]
+    refs = []
+    for pat in patterns:
+        for match in pat.finditer(text):
+            refs.append(match.group())
+    return refs
 
 
 def _extract_keywords(text: str) -> list[str]:
@@ -201,10 +279,20 @@ def _extract_keywords(text: str) -> list[str]:
     return [w.strip(".,!?;:'\"()[]{}") for w in words if w.lower() not in stop_words and len(w) > 2]
 
 
-def _score_relevance(content: str, keywords: list[str]) -> int:
+def _score_relevance(content: str, keywords: list[str], filepath: str = "", file_refs: list[str] | None = None) -> int:
     content_lower = content.lower()
     score = 0
     for keyword in keywords:
         count = content_lower.count(keyword.lower())
         score += count
+
+    if file_refs and filepath:
+        filepath_lower = filepath.lower()
+        filename_lower = Path(filepath).name.lower()
+        for ref in file_refs:
+            ref_lower = ref.lower()
+            ref_base = Path(ref).name.lower()
+            if ref_base == filename_lower or ref_lower in filepath_lower or filepath_lower.endswith(ref_lower):
+                score += 1000
+
     return score

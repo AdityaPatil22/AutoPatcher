@@ -51,7 +51,7 @@ def _call_local(messages: list[dict]) -> str:
         model=model,
         messages=messages,
         temperature=0.2,
-        max_tokens=4096,
+        max_tokens=8192,
     )
     try:
         kwargs["response_format"] = {"type": "json_object"}

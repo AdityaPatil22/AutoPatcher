@@ -35,6 +35,14 @@ def generate_fix(ticket: TicketInput):
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
 
     logger.info("LLM result keys: %s", list(llm_result.keys()))
+    fixes = llm_result.get("fixes", [])
+    logger.info("LLM returned %d fixes", len(fixes))
+    for i, fix in enumerate(fixes):
+        logger.info("  Fix %d: filename=%r, changes=%d",
+                     i, fix.get("filename", ""), len(fix.get("changes", [])))
+
+    ctx_names = [c["filename"] for c in contexts]
+    logger.info("Available contexts: %s", ctx_names)
 
     explanation = llm_result.get("explanation", "No explanation provided.")
     patches = _build_patches(llm_result, contexts)
@@ -103,22 +111,55 @@ def _match_context(filename: str, contexts: list[dict]) -> dict | None:
     return None
 
 
-def _build_patches(llm_result: dict, contexts: list[dict]) -> list[FilePatch]:
-    patches = []
-    matched_files = set()
-
+def _normalize_fixes(llm_result: dict) -> list[dict]:
+    """Extract fixes from the LLM result, handling common structural variations."""
     fixes = llm_result.get("fixes", [])
+
+    if isinstance(fixes, dict):
+        fixes = [fixes]
+
+    if not fixes:
+        if "filename" in llm_result or "file" in llm_result:
+            fixes = [llm_result]
+        elif "changes" in llm_result and isinstance(llm_result["changes"], list):
+            fixes = [llm_result]
+
+    normalized = []
     for fix in fixes:
         if not isinstance(fix, dict):
             continue
 
+        fname = fix.get("filename") or fix.get("file") or fix.get("file_path", "")
+        changes = fix.get("changes", [])
+
+        if isinstance(changes, dict):
+            changes = [changes]
+
+        if not changes and "original" in fix and "modified" in fix:
+            changes = [{"original": fix["original"], "modified": fix["modified"]}]
+
+        normalized.append({"filename": fname, "changes": changes, **fix})
+
+    return normalized
+
+
+def _build_patches(llm_result: dict, contexts: list[dict]) -> list[FilePatch]:
+    patches = []
+
+    fixes = _normalize_fixes(llm_result)
+    logger.info("Normalized %d fixes from LLM result", len(fixes))
+
+    for fix in fixes:
         fname = fix.get("filename", "")
         ctx = _match_context(fname, contexts)
         if not ctx:
-            logger.warning("No context match for LLM filename: %s", fname)
-            continue
+            if len(contexts) == 1:
+                logger.info("Single context fallback for unmatched filename: %s", fname)
+                ctx = contexts[0]
+            else:
+                logger.warning("No context match for LLM filename: %s", fname)
+                continue
 
-        matched_files.add(ctx["filename"])
         changes = fix.get("changes", [])
 
         if changes:
