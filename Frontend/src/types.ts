@@ -26,18 +26,12 @@ export interface RefineInput {
   previous_patches: FilePatch[];
 }
 
-export type LLMProvider = "local" | "cloud";
-export type CloudService = "openai" | "gemini";
+export type LLMProvider = "local" | "gemini";
 
 export interface Settings {
   provider: LLMProvider;
   model: string;
-  cloud_backend: CloudService | null;
-  cloud_available: boolean;
-  openai_key_set: boolean;
-  gemini_key_set: boolean;
-  openai_key_hint: string;
-  gemini_key_hint: string;
+  gemini_available: boolean;
   max_context_files: number;
   repo_path: string | null;
 }

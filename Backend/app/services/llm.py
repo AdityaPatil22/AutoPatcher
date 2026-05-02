@@ -11,35 +11,9 @@ def call_llm(messages: list[dict]) -> dict:
     if config.LLM_PROVIDER == "local":
         raw = _call_local(messages)
     else:
-        raw = _call_cloud(messages)
+        raw = _call_gemini(messages)
 
     return _parse_response(raw)
-
-
-def _call_cloud(messages: list[dict]) -> str:
-    """Route to the appropriate cloud provider based on available API keys."""
-    if config.GEMINI_API_KEY:
-        return _call_gemini(messages)
-    if config.OPENAI_API_KEY:
-        return _call_openai(messages)
-    raise RuntimeError(
-        "No cloud API key configured. Set OPENAI_API_KEY or GEMINI_API_KEY in your .env file."
-    )
-
-
-def _call_openai(messages: list[dict]) -> str:
-    """Send messages to the OpenAI API and return the raw text response."""
-    from openai import OpenAI
-
-    client = OpenAI(api_key=config.OPENAI_API_KEY)
-    model = config.LLM_MODEL or "gpt-4o-mini"
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.2,
-        response_format={"type": "json_object"},
-    )
-    return response.choices[0].message.content
 
 
 def _call_local(messages: list[dict]) -> str:
@@ -66,23 +40,43 @@ def _call_local(messages: list[dict]) -> str:
 
 
 def _call_gemini(messages: list[dict]) -> str:
-    """Send messages to the Google Gemini API and return the raw text response."""
-    import google.generativeai as genai
+    """Send messages to the Google Gemini API using the google-genai SDK with thinking and search."""
+    from google import genai
+    from google.genai import types
 
-    genai.configure(api_key=config.GEMINI_API_KEY)
-    model = genai.GenerativeModel(config.LLM_MODEL or "gemini-1.5-flash")
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
+    model = config.LLM_MODEL or "gemini-3-flash-preview"
 
-    prompt_parts = []
+    system_parts = []
+    contents = []
     for msg in messages:
-        prefix = "System: " if msg["role"] == "system" else "User: "
-        prompt_parts.append(prefix + msg["content"])
+        if msg["role"] == "system":
+            system_parts.append(msg["content"])
+        else:
+            role = "model" if msg["role"] == "assistant" else "user"
+            contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=msg["content"])],
+                )
+            )
 
-    response = model.generate_content(
-        "\n\n".join(prompt_parts),
-        generation_config=genai.GenerationConfig(
-            temperature=0.2,
-            response_mime_type="application/json",
-        ),
+    THINKING_MODELS = {"gemini-3-flash-preview", "gemini-2.5-pro-preview-05-06"}
+
+    config_kwargs = {
+        "system_instruction": "\n\n".join(system_parts) if system_parts else None,
+        "temperature": 0.2,
+        "tools": [types.Tool(google_search=types.GoogleSearch())],
+    }
+    if model in THINKING_MODELS:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="HIGH")
+
+    generate_config = types.GenerateContentConfig(**config_kwargs)
+
+    response = client.models.generate_content(
+        model=model,
+        contents=contents,
+        config=generate_config,
     )
     return response.text
 

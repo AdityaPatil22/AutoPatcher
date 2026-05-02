@@ -8,12 +8,6 @@ from pydantic import BaseModel, Field
 class LLMProviderEnum(str, Enum):
     """Supported LLM provider backends."""
     local = "local"
-    cloud = "cloud"
-
-
-class CloudServiceEnum(str, Enum):
-    """Cloud LLM services."""
-    openai = "openai"
     gemini = "gemini"
 
 
@@ -71,12 +65,6 @@ class ProviderRequest(BaseModel):
 class ModelRequest(BaseModel):
     """Request to change the LLM model name."""
     model: str = Field(..., min_length=1)
-
-
-class ApiKeyRequest(BaseModel):
-    """Request to set a cloud API key."""
-    service: CloudServiceEnum
-    api_key: str = Field(..., min_length=1)
 
 
 class MaxContextFilesRequest(BaseModel):

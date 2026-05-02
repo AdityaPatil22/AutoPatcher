@@ -1,4 +1,4 @@
-import type { CloudService, LLMProvider, Settings } from "../types";
+import type { LLMProvider, Settings } from "../types";
 import { request } from "./client";
 
 export function getSettings() {
@@ -16,13 +16,6 @@ export function setModel(model: string) {
   return request<{ model: string }>("/settings/model", {
     method: "PUT",
     body: JSON.stringify({ model }),
-  });
-}
-
-export function setApiKey(service: CloudService, apiKey: string) {
-  return request<{ service: string; key_hint: string }>("/settings/api-key", {
-    method: "PUT",
-    body: JSON.stringify({ service, api_key: apiKey }),
   });
 }
 

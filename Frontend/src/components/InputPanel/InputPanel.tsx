@@ -11,16 +11,9 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
   const {
     llmProvider,
     modelName,
-    cloudService,
-    apiKeyInput,
-    setApiKeyInput,
-    currentKeyHint,
-    keySaved,
     maxContextFiles,
     handleProviderChange,
     handleModelInput,
-    handleSaveApiKey,
-    handleCloudServiceChange,
     handleMaxContextFilesChange,
   } = settings;
 
@@ -90,10 +83,10 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
             </button>
             <button
               type="button"
-              className={`mode-btn ${llmProvider === "cloud" ? "active" : ""}`}
-              onClick={() => handleProviderChange("cloud")}
+              className={`mode-btn ${llmProvider === "gemini" ? "active" : ""}`}
+              onClick={() => handleProviderChange("gemini")}
             >
-              Cloud
+              Gemini
             </button>
           </div>
         </div>
@@ -110,76 +103,18 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
           </div>
         )}
 
-        {llmProvider === "cloud" && (
-          <>
-            <div className="form-group">
-              <label>Cloud Service</label>
-              <div className="search-mode-toggle">
-                <button
-                  type="button"
-                  className={`mode-btn ${cloudService === "openai" ? "active" : ""}`}
-                  onClick={() => handleCloudServiceChange("openai")}
-                >
-                  OpenAI
-                </button>
-                <button
-                  type="button"
-                  className={`mode-btn ${cloudService === "gemini" ? "active" : ""}`}
-                  onClick={() => handleCloudServiceChange("gemini")}
-                >
-                  Gemini
-                </button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label htmlFor="apiKey">
-                API Key
-                {currentKeyHint && (
-                  <span className="key-hint"> ({currentKeyHint})</span>
-                )}
-              </label>
-              <div className="api-key-row">
-                <input
-                  id="apiKey"
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => {
-                    setApiKeyInput(e.target.value);
-                  }}
-                  placeholder={
-                    currentKeyHint
-                      ? `Current: ${currentKeyHint}`
-                      : cloudService === "openai"
-                        ? "sk-..."
-                        : "AI..."
-                  }
-                />
-                <button
-                  type="button"
-                  className={`btn btn-save ${keySaved ? "saved" : ""}`}
-                  onClick={handleSaveApiKey}
-                  disabled={!apiKeyInput.trim() || keySaved}
-                >
-                  {keySaved ? "Saved" : "Save"}
-                </button>
-              </div>
-            </div>
-            <div className="form-group">
-              <label htmlFor="cloudModel">
-                Model Name <span className="optional">(optional)</span>
-              </label>
-              <input
-                id="cloudModel"
-                value={modelName}
-                onChange={(e) => handleModelInput(e.target.value)}
-                placeholder={
-                  cloudService === "openai"
-                    ? "default: gpt-4o-mini"
-                    : "default: gemini-1.5-flash"
-                }
-              />
-            </div>
-          </>
+        {llmProvider === "gemini" && (
+          <div className="form-group">
+            <label htmlFor="geminiModel">
+              Model Name <span className="optional">(optional)</span>
+            </label>
+            <input
+              id="geminiModel"
+              value={modelName}
+              onChange={(e) => handleModelInput(e.target.value)}
+              placeholder="default: gemini-2.5-flash"
+            />
+          </div>
         )}
 
         <div className="form-group">
