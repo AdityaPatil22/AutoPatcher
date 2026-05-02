@@ -2,9 +2,11 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.models import PatchOutput, RefineInput, TicketInput
+from app.models_db import User
+from app.routes.auth import get_current_user
 from app.services.context import get_top_contexts
 from app.services.fix_builder import build_patches
 from app.services.llm import call_llm
@@ -16,7 +18,7 @@ router = APIRouter(tags=["patch"])
 
 
 @router.post("/generate-fix", response_model=PatchOutput)
-def generate_fix(ticket: TicketInput):
+def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user)):
     """Generate code patches for a bug described in the ticket."""
     contexts = get_top_contexts(ticket.description, ticket.file_hint)
 
@@ -48,7 +50,7 @@ def generate_fix(ticket: TicketInput):
 
 
 @router.post("/refine-fix", response_model=PatchOutput)
-def refine_fix(refine: RefineInput):
+def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user)):
     """Refine a previous fix based on user feedback."""
     contexts = get_top_contexts(refine.description, refine.file_hint)
 

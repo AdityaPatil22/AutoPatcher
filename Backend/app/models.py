@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class LLMProviderEnum(str, Enum):
@@ -53,8 +53,15 @@ class RefineInput(BaseModel):
 
 
 class IndexRequest(BaseModel):
-    """Request to index a repository directory."""
-    repo_path: str = Field(..., min_length=1)
+    """Request to index a repository via local path or GitHub URL."""
+    repo_path: str | None = Field(default=None, min_length=1)
+    github_url: str | None = Field(default=None, min_length=1, examples=["https://github.com/owner/repo"])
+
+    @model_validator(mode="after")
+    def at_least_one_source(self):
+        if not self.repo_path and not self.github_url:
+            raise ValueError("Provide either repo_path or github_url")
+        return self
 
 
 class ProviderRequest(BaseModel):

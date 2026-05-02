@@ -26,6 +26,13 @@ export interface RefineInput {
   previous_patches: FilePatch[];
 }
 
+export interface User {
+  github_id: number;
+  username: string;
+  email: string | null;
+  avatar_url: string;
+}
+
 export type LLMProvider = "local" | "gemini";
 
 export interface Settings {

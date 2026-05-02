@@ -6,6 +6,7 @@ import IndexModal from "./components/IndexModal/IndexModal";
 import { useTheme } from "./hooks/useTheme";
 import { useIndex } from "./hooks/useIndex";
 import { useSettings } from "./hooks/useSettings";
+import { useAuth } from "./hooks/useAuth";
 import { usePatchGeneration } from "./hooks/usePatchGeneration";
 import "./App.css";
 
@@ -13,6 +14,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const { indexState, indexStatusText, fetchIndex } = useIndex();
   const settings = useSettings();
+  const auth = useAuth();
   const patchGen = usePatchGeneration();
 
   const [showIndexModal, setShowIndexModal] = useState(false);
@@ -31,6 +33,7 @@ export default function App() {
         theme={theme}
         toggleTheme={toggleTheme}
         onOpenIndexModal={() => setShowIndexModal(true)}
+        auth={auth}
       />
 
       <main className="layout">

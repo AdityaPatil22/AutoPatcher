@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -6,15 +7,27 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import app.config as config
+from app.db import Base, engine
 from app.middleware import APIKeyScrubMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
+from app.routes.auth import router as auth_router
 from app.routes.fix import router as fix_router
 from app.routes.index import router as index_router
 from app.routes.settings import router as settings_router
+
+import app.models_db  # noqa: F401  ensure models are registered before create_all
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
 
 app = FastAPI(
     title="AutoPatch AI",
     description="AI-powered code patch generation from bug tickets",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -29,9 +42,10 @@ app.add_middleware(
     allow_origins=config.ALLOWED_ORIGINS,
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type"],
-    allow_credentials=False,
+    allow_credentials=True,
 )
 
+app.include_router(auth_router, prefix="/api")
 app.include_router(fix_router, prefix="/api")
 app.include_router(index_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
