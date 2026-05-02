@@ -5,7 +5,11 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 import app.config as config
 
-engine = create_engine(config.DATABASE_URL, pool_pre_ping=True)
+_url = config.DATABASE_URL
+if _url.startswith("postgres://"):
+    _url = _url.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
