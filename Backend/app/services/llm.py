@@ -6,12 +6,22 @@ import re
 import app.config as config
 
 
+def _scrub_key(text: str) -> str:
+    """Remove the Gemini API key from any string to prevent accidental leakage."""
+    if config.GEMINI_API_KEY and config.GEMINI_API_KEY in text:
+        text = text.replace(config.GEMINI_API_KEY, "[REDACTED]")
+    return re.sub(r"AIza[0-9A-Za-z_-]{35}", "[REDACTED]", text)
+
+
 def call_llm(messages: list[dict]) -> dict:
     """Call the configured LLM provider and return parsed JSON response."""
-    if config.LLM_PROVIDER == "local":
-        raw = _call_local(messages)
-    else:
-        raw = _call_gemini(messages)
+    try:
+        if config.LLM_PROVIDER == "local":
+            raw = _call_local(messages)
+        else:
+            raw = _call_gemini(messages)
+    except Exception as exc:
+        raise RuntimeError(_scrub_key(str(exc))) from None
 
     return _parse_response(raw)
 

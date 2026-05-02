@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+import app.config as config
+from app.middleware import APIKeyScrubMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 from app.routes.fix import router as fix_router
 from app.routes.index import router as index_router
 from app.routes.settings import router as settings_router
@@ -15,11 +17,19 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(APIKeyScrubMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    global_rpm=config.RATE_LIMIT_GLOBAL,
+    llm_rpm=config.RATE_LIMIT_LLM,
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=config.ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "PUT"],
+    allow_headers=["Content-Type"],
+    allow_credentials=False,
 )
 
 app.include_router(fix_router, prefix="/api")

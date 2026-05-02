@@ -1,0 +1,117 @@
+"""Security middleware: rate limiting, XSS/clickjacking headers, and API key scrubbing."""
+
+import re
+import time
+from collections import defaultdict
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
+import app.config as config
+
+_GEMINI_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{35}")
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Sliding-window rate limiter per client IP.
+
+    Applies a stricter limit to LLM endpoints (generate-fix, refine-fix)
+    and a more generous global limit to everything else.
+    """
+
+    LLM_PATHS = {"/api/generate-fix", "/api/refine-fix"}
+
+    def __init__(self, app, global_rpm: int = 60, llm_rpm: int = 10):
+        super().__init__(app)
+        self.global_rpm = global_rpm
+        self.llm_rpm = llm_rpm
+        self._window = 60
+        self._global_hits: dict[str, list[float]] = defaultdict(list)
+        self._llm_hits: dict[str, list[float]] = defaultdict(list)
+
+    def _prune(self, bucket: dict[str, list[float]], ip: str, now: float) -> list[float]:
+        entries = [t for t in bucket[ip] if now - t < self._window]
+        bucket[ip] = entries
+        return entries
+
+    async def dispatch(self, request: Request, call_next):
+        ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        path = request.url.path
+
+        global_hits = self._prune(self._global_hits, ip, now)
+        if len(global_hits) >= self.global_rpm:
+            retry = max(1, int(self._window - (now - global_hits[0])))
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Please slow down."},
+                headers={"Retry-After": str(retry)},
+            )
+
+        if path in self.LLM_PATHS:
+            llm_hits = self._prune(self._llm_hits, ip, now)
+            if len(llm_hits) >= self.llm_rpm:
+                retry = max(1, int(self._window - (now - llm_hits[0])))
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "LLM rate limit exceeded. Max 10 requests per minute."},
+                    headers={"Retry-After": str(retry)},
+                )
+            self._llm_hits[ip].append(now)
+
+        self._global_hits[ip].append(now)
+        return await call_next(request)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inject headers that mitigate XSS, clickjacking, and MIME-type sniffing."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if request.url.path.startswith("/api"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; frame-ancestors 'none'"
+            )
+        return response
+
+
+class APIKeyScrubMiddleware(BaseHTTPMiddleware):
+    """Defence-in-depth: scrub Gemini API keys from JSON error responses.
+
+    Only inspects API responses with 4xx/5xx status codes to keep the
+    overhead near-zero for normal requests.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+
+        is_api = request.url.path.startswith("/api")
+        is_error = response.status_code >= 400
+        is_json = "application/json" in response.headers.get("content-type", "")
+
+        if not (is_api and is_error and is_json):
+            return response
+
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk if isinstance(chunk, bytes) else chunk.encode()
+
+        body_str = body.decode()
+
+        if config.GEMINI_API_KEY and config.GEMINI_API_KEY in body_str:
+            body_str = body_str.replace(config.GEMINI_API_KEY, "[REDACTED]")
+
+        body_str = _GEMINI_KEY_PATTERN.sub("[REDACTED]", body_str)
+
+        return Response(
+            content=body_str,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )

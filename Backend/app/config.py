@@ -12,6 +12,14 @@ GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "local")
 LLM_MODEL: str = os.getenv("LLM_MODEL", "")
 
+_origins_raw = os.getenv("ALLOWED_ORIGINS").strip()
+ALLOWED_ORIGINS: list[str] = (
+    ["*"] if _origins_raw == "*"
+    else [o.strip() for o in _origins_raw.split(",") if o.strip()]
+)
+RATE_LIMIT_GLOBAL: int = int(os.getenv("RATE_LIMIT_GLOBAL", "60"))
+RATE_LIMIT_LLM: int = int(os.getenv("RATE_LIMIT_LLM", "10"))
+
 LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1")
 
 _default_repo = os.getenv("SAMPLE_REPO_PATH", "")
