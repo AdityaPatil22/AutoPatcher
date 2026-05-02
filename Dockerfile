@@ -10,23 +10,24 @@ RUN npm run build
 # Stage 2 — Python runtime serving everything
 FROM docker.io/library/python:3.13-slim AS runtime
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git build-essential libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY Backend/requirements.txt /app/Backend/requirements.txt
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential && \
-    pip install --no-cache-dir -r /app/Backend/requirements.txt && \
-    apt-get purge -y build-essential && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir -r /app/Backend/requirements.txt
 
 COPY Backend/ /app/Backend/
 COPY --from=frontend-builder /build/dist /app/Frontend/dist
 
-RUN mkdir -p /app/.chroma_index
-VOLUME /app/.chroma_index
+RUN mkdir -p /app/.chroma_index /tmp/autopatch_clones
 
 EXPOSE 8000
+
+ENV CHROMA_PERSIST_DIR=/app/.chroma_index
+ENV CLONE_DIR=/tmp/autopatch_clones
 
 WORKDIR /app/Backend
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
