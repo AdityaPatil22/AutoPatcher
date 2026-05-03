@@ -13,14 +13,17 @@ def get_top_contexts(
     query: str,
     file_hint: str | None = None,
     max_files: int | None = None,
+    *,
+    user_id: int,
+    repo_path: str | None = None,
 ) -> list[dict]:
     """Return the top matching source files for a query, using the configured search strategy with fallbacks."""
     if max_files is None:
         max_files = config.MAX_CONTEXT_FILES
 
-    results = _search_with_fallback(query, file_hint)
+    results = _search_with_fallback(query, file_hint, user_id=user_id, repo_path=repo_path)
 
-    direct_hits = _find_referenced_files(query)
+    direct_hits = _find_referenced_files(query, user_id=user_id)
     if direct_hits:
         seen_paths = {r["path"] for r in results}
         for hit in direct_hits:
@@ -35,29 +38,35 @@ def get_top_contexts(
     return results[:max_files]
 
 
-def _search_with_fallback(query: str, file_hint: str | None) -> list[dict]:
+def _search_with_fallback(
+    query: str,
+    file_hint: str | None,
+    *,
+    user_id: int,
+    repo_path: str | None = None,
+) -> list[dict]:
     """Run hybrid search, falling back through hint removal and keyword search."""
-    results = search_files_hybrid(query, file_hint)
+    results = search_files_hybrid(query, file_hint, user_id=user_id, repo_path=repo_path)
 
     if not results and file_hint:
-        results = search_files_hybrid(query)
+        results = search_files_hybrid(query, user_id=user_id, repo_path=repo_path)
 
     if not results:
-        results = search_files(query, file_hint)
+        results = search_files(query, file_hint, repo_path=repo_path)
         if not results and file_hint:
-            results = search_files(query)
+            results = search_files(query, repo_path=repo_path)
 
     return results
 
 
-def _find_referenced_files(query: str) -> list[dict]:
+def _find_referenced_files(query: str, *, user_id: int) -> list[dict]:
     """Directly locate files mentioned by path in the query by walking the indexed repository."""
     file_refs = extract_file_references(query)
     if not file_refs or not config.CHROMA_PERSIST_DIR:
         return []
 
     from app.services.indexer import get_indexed_files
-    indexed = get_indexed_files()
+    indexed = get_indexed_files(user_id)
     if not indexed:
         return []
     repo_path = os.path.commonpath(indexed)

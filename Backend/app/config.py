@@ -27,14 +27,13 @@ RATE_LIMIT_LLM: int = int(os.getenv("RATE_LIMIT_LLM", "10"))
 GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
 GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
 SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE-ME-generate-a-fernet-key")
-FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://autopatch-ai-production.up.railway.app/")
 
 # --- Database ---
 DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://localhost/autopatch")
 
 # --- Indexing ---
-_default_repo = os.getenv("SAMPLE_REPO_PATH", "")
-SAMPLE_REPO_PATH: Path | None = Path(_default_repo) if _default_repo else None
+REPO_PATH: Path | None = None  # legacy; per-user repo_path is stored in DB
 MAX_CONTEXT_FILES: int = int(os.getenv("MAX_CONTEXT_FILES", "3"))
 CHROMA_PERSIST_DIR: Path = Path(
     os.getenv("CHROMA_PERSIST_DIR", str(Path(__file__).resolve().parent.parent.parent / ".chroma_index"))

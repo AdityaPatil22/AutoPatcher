@@ -7,10 +7,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 import app.config as config
+from app.db import get_db
 from app.models import IndexRequest
+from app.models_db import User
+from app.routes.auth import get_current_user
 from app.services.indexer import get_index_stats, get_indexed_files, index_repository
 from app.utils.tree import build_file_tree
 
@@ -21,8 +25,8 @@ router = APIRouter(tags=["index"])
 _GITHUB_URL_RE = re.compile(r"^https://github\.com/[\w.\-]+/[\w.\-]+/?$")
 
 
-def _clone_github_repo(github_url: str) -> Path:
-    """Clone a public GitHub repo (shallow) into CLONE_DIR, cleaning up any prior clone."""
+def _clone_github_repo(github_url: str, user_id: int) -> Path:
+    """Clone a public GitHub repo (shallow) into a per-user subdirectory of CLONE_DIR."""
     url = github_url.rstrip("/")
     if not _GITHUB_URL_RE.match(url):
         raise HTTPException(status_code=400, detail="Invalid GitHub URL. Expected https://github.com/owner/repo")
@@ -30,10 +34,10 @@ def _clone_github_repo(github_url: str) -> Path:
     parts = url.rstrip("/").split("/")
     repo_name = parts[-1]
 
-    clone_dir = config.CLONE_DIR
-    clone_dir.mkdir(parents=True, exist_ok=True)
+    user_clone_dir = config.CLONE_DIR / str(user_id)
+    user_clone_dir.mkdir(parents=True, exist_ok=True)
 
-    target = clone_dir / repo_name
+    target = user_clone_dir / repo_name
     if target.exists():
         shutil.rmtree(target)
 
@@ -55,18 +59,23 @@ def _clone_github_repo(github_url: str) -> Path:
 
 
 @router.post("/index")
-def index_repo(req: IndexRequest):
+def index_repo(
+    req: IndexRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Index a repository from a local path or a GitHub URL."""
     if req.github_url:
-        repo = _clone_github_repo(req.github_url)
+        repo = _clone_github_repo(req.github_url, user.id)
     else:
         repo = Path(req.repo_path).expanduser().resolve()
         if not repo.is_dir():
             raise HTTPException(status_code=400, detail=f"Directory not found: {repo}")
 
-    config.SAMPLE_REPO_PATH = repo
+    user.repo_path = str(repo)
+    db.commit()
 
-    result = index_repository(repo)
+    result = index_repository(repo, user.id)
     return {
         "status": "ok",
         "files_indexed": result["files_indexed"],
@@ -76,15 +85,15 @@ def index_repo(req: IndexRequest):
 
 
 @router.get("/index/status")
-def index_status():
+def index_status(user: User = Depends(get_current_user)):
     """Return current index stats (whether indexed and chunk count)."""
-    return get_index_stats()
+    return get_index_stats(user.id)
 
 
 @router.get("/index/files")
-def index_files():
+def index_files(user: User = Depends(get_current_user)):
     """Return the indexed file tree with relative paths."""
-    raw_paths = get_indexed_files()
+    raw_paths = get_indexed_files(user.id)
     if not raw_paths:
         return {"tree": [], "total_files": 0}
 

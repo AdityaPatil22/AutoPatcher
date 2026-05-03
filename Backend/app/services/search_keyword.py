@@ -8,16 +8,17 @@ import app.config as config
 from app.constants import SKIP_DIRS, SUPPORTED_EXTENSIONS
 
 
-def search_files(query: str, file_hint: str | None = None) -> list[dict]:
+def search_files(query: str, file_hint: str | None = None, *, repo_path: str | None = None) -> list[dict]:
     """Walk the repo and score files by keyword relevance, optionally filtered by filename hint."""
-    if not config.SAMPLE_REPO_PATH:
+    walk_root = Path(repo_path) if repo_path else config.REPO_PATH
+    if not walk_root:
         return []
 
     keywords = extract_keywords(query)
     file_refs = extract_file_references(query)
     results = []
 
-    for root, dirs, files in os.walk(config.SAMPLE_REPO_PATH):
+    for root, dirs, files in os.walk(walk_root):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
         for filename in files:

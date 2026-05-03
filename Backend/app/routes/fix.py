@@ -20,7 +20,10 @@ router = APIRouter(tags=["patch"])
 @router.post("/generate-fix", response_model=PatchOutput)
 def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user)):
     """Generate code patches for a bug described in the ticket."""
-    contexts = get_top_contexts(ticket.description, ticket.file_hint)
+    contexts = get_top_contexts(
+        ticket.description, ticket.file_hint,
+        user_id=_user.id, repo_path=_user.repo_path,
+    )
 
     if not contexts:
         raise HTTPException(
@@ -52,7 +55,10 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user)):
 @router.post("/refine-fix", response_model=PatchOutput)
 def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user)):
     """Refine a previous fix based on user feedback."""
-    contexts = get_top_contexts(refine.description, refine.file_hint)
+    contexts = get_top_contexts(
+        refine.description, refine.file_hint,
+        user_id=_user.id, repo_path=_user.repo_path,
+    )
 
     if not contexts:
         raise HTTPException(

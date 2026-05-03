@@ -13,11 +13,11 @@ CHUNK_SIZE = 60
 CHUNK_OVERLAP = 10
 
 
-def _get_collection():
-    """Get or create the ChromaDB collection for code chunks."""
+def _get_collection(user_id: int):
+    """Get or create the per-user ChromaDB collection for code chunks."""
     client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
     return client.get_or_create_collection(
-        name="autopatch_code",
+        name=f"autopatch_code_{user_id}",
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -56,9 +56,9 @@ def _make_chunk_id(filepath: str, start_line: int) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def index_repository(repo_path: Path) -> dict:
+def index_repository(repo_path: Path, user_id: int) -> dict:
     """Index all supported files in a repository into ChromaDB for semantic search."""
-    collection = _get_collection()
+    collection = _get_collection(user_id)
 
     existing_ids = collection.get()["ids"]
     if existing_ids:
@@ -112,9 +112,9 @@ def index_repository(repo_path: Path) -> dict:
     }
 
 
-def search_semantic(query: str, top_k: int = 10) -> list[dict]:
+def search_semantic(query: str, user_id: int, top_k: int = 10) -> list[dict]:
     """Query ChromaDB for the top-k most similar code chunks to the query text."""
-    collection = _get_collection()
+    collection = _get_collection(user_id)
 
     if collection.count() == 0:
         return []
@@ -138,27 +138,27 @@ def search_semantic(query: str, top_k: int = 10) -> list[dict]:
     return hits
 
 
-def is_indexed() -> bool:
-    """Check whether any code has been indexed in ChromaDB."""
+def is_indexed(user_id: int) -> bool:
+    """Check whether any code has been indexed in ChromaDB for this user."""
     try:
-        return _get_collection().count() > 0
+        return _get_collection(user_id).count() > 0
     except Exception:
         return False
 
 
-def get_index_stats() -> dict:
-    """Return index status and total chunk count."""
+def get_index_stats(user_id: int) -> dict:
+    """Return index status and total chunk count for this user."""
     try:
-        collection = _get_collection()
+        collection = _get_collection(user_id)
         return {"indexed": collection.count() > 0, "total_chunks": collection.count()}
     except Exception:
         return {"indexed": False, "total_chunks": 0}
 
 
-def get_indexed_files() -> list[str]:
-    """Return a sorted list of all indexed file paths."""
+def get_indexed_files(user_id: int) -> list[str]:
+    """Return a sorted list of all indexed file paths for this user."""
     try:
-        collection = _get_collection()
+        collection = _get_collection(user_id)
         if collection.count() == 0:
             return []
         result = collection.get(include=["metadatas"])

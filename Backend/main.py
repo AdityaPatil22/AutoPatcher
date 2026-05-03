@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -5,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect, text
 
 import app.config as config
 from app.db import Base, engine
@@ -16,10 +18,18 @@ from app.routes.settings import router as settings_router
 
 import app.models_db  # noqa: F401  ensure models are registered before create_all
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    insp = inspect(engine)
+    cols = {c["name"] for c in insp.get_columns("users")}
+    if "repo_path" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN repo_path TEXT"))
+        logger.info("Migrated: added repo_path column to users table")
     yield
 
 

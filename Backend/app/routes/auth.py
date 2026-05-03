@@ -118,6 +118,20 @@ def get_current_user(
     return user
 
 
+def get_current_user_optional(
+    session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Like get_current_user but returns None instead of raising 401."""
+    if not session:
+        return None
+    try:
+        payload = jwt.decode(session, config.SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.InvalidTokenError:
+        return None
+    return db.query(User).filter(User.github_id == payload["github_id"]).first()
+
+
 @router.get("/auth/me")
 def get_me(user: User = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""

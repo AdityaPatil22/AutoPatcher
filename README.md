@@ -59,7 +59,7 @@ podman run -d --name autopatch -p 8000:8000 \
   -v /path/to/repo:/repo:ro \
   -e LLM_PROVIDER=cloud \
   -e OPENAI_API_KEY=sk-... \
-  -e SAMPLE_REPO_PATH=/repo \
+  -e REPO_PATH=/repo \
   autopatch-ai
 ```
 
@@ -182,7 +182,7 @@ Copy `Backend/.env.example` to `Backend/.env` and set your values:
 | `GEMINI_API_KEY`     | —                            | Your Google Gemini API key                |
 | `LLM_MODEL`          | —                            | Model name (e.g. `llama3:8b`, `gpt-4o-mini`) |
 | `LOCAL_LLM_BASE_URL` | `http://localhost:11434/v1`  | Base URL for local LLM server (Ollama)    |
-| `SAMPLE_REPO_PATH`   | —                            | Path to a repository to auto-index        |
+| `REPO_PATH`          | —                            | Path to a repository to auto-index        |
 | `MAX_CONTEXT_FILES`  | `3`                          | Number of files to include as context     |
 | `CHROMA_PERSIST_DIR` | `./.chroma_index`            | ChromaDB vector store location            |
 

@@ -5,11 +5,11 @@ from pathlib import Path
 from app.services.search_keyword import extract_file_references, search_files
 
 
-def search_files_semantic(query: str, file_hint: str | None = None) -> list[dict]:
+def search_files_semantic(query: str, file_hint: str | None = None, *, user_id: int) -> list[dict]:
     """Search indexed files by vector similarity, with score boosting for referenced filenames."""
     from app.services.indexer import search_semantic
 
-    hits = search_semantic(query, top_k=10)
+    hits = search_semantic(query, user_id, top_k=10)
     if not hits:
         return []
 
@@ -52,10 +52,16 @@ def search_files_semantic(query: str, file_hint: str | None = None) -> list[dict
     return results
 
 
-def search_files_hybrid(query: str, file_hint: str | None = None) -> list[dict]:
+def search_files_hybrid(
+    query: str,
+    file_hint: str | None = None,
+    *,
+    user_id: int,
+    repo_path: str | None = None,
+) -> list[dict]:
     """Merge keyword and semantic search results with weighted scoring (40% keyword, 60% semantic)."""
-    keyword_results = search_files(query, file_hint)
-    semantic_results = search_files_semantic(query, file_hint)
+    keyword_results = search_files(query, file_hint, repo_path=repo_path)
+    semantic_results = search_files_semantic(query, file_hint, user_id=user_id)
 
     if not semantic_results:
         return keyword_results

@@ -1,6 +1,6 @@
 """Settings routes for configuring LLM provider and model."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 import app.config as config
 from app.models import (
@@ -8,19 +8,21 @@ from app.models import (
     ModelRequest,
     ProviderRequest,
 )
+from app.models_db import User
+from app.routes.auth import get_current_user_optional
 
 router = APIRouter(tags=["settings"])
 
 
 @router.get("/settings")
-def get_settings():
+def get_settings(user: User | None = Depends(get_current_user_optional)):
     """Return current settings including provider and model."""
     return {
         "provider": config.LLM_PROVIDER,
         "model": config.LLM_MODEL,
         "gemini_available": bool(config.GEMINI_API_KEY),
         "max_context_files": config.MAX_CONTEXT_FILES,
-        "repo_path": str(config.SAMPLE_REPO_PATH) if config.SAMPLE_REPO_PATH else None,
+        "repo_path": user.repo_path if user else None,
     }
 
 
