@@ -29,6 +29,8 @@ class User(Base):
     avatar_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     access_token_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     repo_path: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    github_repo_owner: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    github_repo_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

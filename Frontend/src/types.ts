@@ -31,6 +31,7 @@ export interface User {
   username: string;
   email: string | null;
   avatar_url: string;
+  has_repo_scope: boolean;
 }
 
 export type LLMProvider = "local" | "gemini";
@@ -65,4 +66,17 @@ export interface IndexResult {
   files_indexed: number;
   chunks_created: number;
   message?: string;
+}
+
+export interface CreatePRRequest {
+  ticket_title: string;
+  explanation: string;
+  patches: FilePatch[];
+  base_branch?: string;
+}
+
+export interface CreatePRResponse {
+  pr_number: number;
+  pr_url: string;
+  branch: string;
 }

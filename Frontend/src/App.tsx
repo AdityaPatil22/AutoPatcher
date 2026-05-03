@@ -53,6 +53,7 @@ export default function App() {
           feedback={patchGen.feedback}
           setFeedback={patchGen.setFeedback}
           handleRefineFix={patchGen.handleRefineFix}
+          hasRepoScope={auth.user?.has_repo_scope ?? false}
         />
       </main>
 

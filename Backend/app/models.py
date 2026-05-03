@@ -77,3 +77,18 @@ class ModelRequest(BaseModel):
 class MaxContextFilesRequest(BaseModel):
     """Request to change the max number of context files sent to the LLM."""
     max_files: int = Field(..., ge=1, le=20)
+
+
+class CreatePRRequest(BaseModel):
+    """Request to create a GitHub Pull Request from generated patches."""
+    ticket_title: str = Field(..., min_length=1)
+    explanation: str = Field(default="")
+    patches: list[FilePatch] = Field(..., min_items=1)
+    base_branch: str | None = Field(default=None, description="Target branch (defaults to repo's default branch)")
+
+
+class CreatePRResponse(BaseModel):
+    """Response after successfully creating a Pull Request."""
+    pr_number: int
+    pr_url: str
+    branch: str

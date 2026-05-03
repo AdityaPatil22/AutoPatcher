@@ -26,7 +26,7 @@ def github_login():
     """Redirect the user to GitHub's OAuth authorization page."""
     params = urlencode({
         "client_id": config.GITHUB_CLIENT_ID,
-        "scope": "read:user user:email",
+        "scope": "read:user user:email repo",
     })
     return RedirectResponse(url=f"{GITHUB_AUTHORIZE_URL}?{params}")
 
@@ -132,14 +132,37 @@ def get_current_user_optional(
     return db.query(User).filter(User.github_id == payload["github_id"]).first()
 
 
+def _check_token_scopes(token: str) -> set[str]:
+    """Probe the token's granted scopes via the GitHub API response header."""
+    try:
+        resp = httpx.get(
+            GITHUB_USER_URL,
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            timeout=5,
+        )
+        raw = resp.headers.get("X-OAuth-Scopes", "")
+        return {s.strip() for s in raw.split(",") if s.strip()}
+    except Exception:
+        return set()
+
+
 @router.get("/auth/me")
 def get_me(user: User = Depends(get_current_user)):
-    """Return the currently authenticated user's profile."""
+    """Return the currently authenticated user's profile, including token scope status."""
+    has_repo_scope = False
+    try:
+        token = user.get_access_token()
+        scopes = _check_token_scopes(token)
+        has_repo_scope = "repo" in scopes
+    except Exception:
+        pass
+
     return {
         "github_id": user.github_id,
         "username": user.username,
         "email": user.email,
         "avatar_url": user.avatar_url,
+        "has_repo_scope": has_repo_scope,
     }
 
 

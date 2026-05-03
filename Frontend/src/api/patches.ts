@@ -1,4 +1,4 @@
-import type { PatchOutput, RefineInput, TicketInput } from "../types";
+import type { CreatePRRequest, CreatePRResponse, PatchOutput, RefineInput, TicketInput } from "../types";
 import { request } from "./client";
 
 export function generateFix(ticket: TicketInput) {
@@ -10,6 +10,13 @@ export function generateFix(ticket: TicketInput) {
 
 export function refineFix(input: RefineInput) {
   return request<PatchOutput>("/refine-fix", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createPR(input: CreatePRRequest) {
+  return request<CreatePRResponse>("/create-pr", {
     method: "POST",
     body: JSON.stringify(input),
   });

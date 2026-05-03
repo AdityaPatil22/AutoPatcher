@@ -67,10 +67,15 @@ def index_repo(
     """Index a repository from a local path or a GitHub URL."""
     if req.github_url:
         repo = _clone_github_repo(req.github_url, user.id)
+        parts = req.github_url.rstrip("/").split("/")
+        user.github_repo_owner = parts[-2]
+        user.github_repo_name = parts[-1]
     else:
         repo = Path(req.repo_path).expanduser().resolve()
         if not repo.is_dir():
             raise HTTPException(status_code=400, detail=f"Directory not found: {repo}")
+        user.github_repo_owner = None
+        user.github_repo_name = None
 
     user.repo_path = str(repo)
     db.commit()
