@@ -2,8 +2,9 @@
 venv/
 .venv/
 
-# Environment variables
+# Environment variables (never commit real secrets)
 .env
+Backend/.env
 
 # Python
 __pycache__/
