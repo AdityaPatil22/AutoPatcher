@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 
+function getInitialTheme(): "dark" | "light" {
+  const stored = localStorage.getItem("theme");
+  if (stored === "light" || stored === "dark") return stored;
+  return "dark";
+}
+
 export function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-  });
+  const [theme, setTheme] = useState<"dark" | "light">(getInitialTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("theme", theme);
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute("content", theme);
   }, [theme]);
 
   function toggleTheme() {
