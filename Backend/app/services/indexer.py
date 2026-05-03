@@ -6,17 +6,43 @@ from pathlib import Path
 
 import chromadb
 
-from app.config import CHROMA_PERSIST_DIR
+from app import config
 from app.constants import SKIP_DIRS, SUPPORTED_EXTENSIONS
 
 CHUNK_SIZE = 60
 CHUNK_OVERLAP = 10
 
+_chroma_client: chromadb.ClientAPI | None = None
+
+
+def _get_client() -> chromadb.ClientAPI:
+    """Return a cached ChromaDB client based on CHROMA_MODE."""
+    global _chroma_client
+    if _chroma_client is not None:
+        return _chroma_client
+
+    mode = config.CHROMA_MODE
+
+    if mode == "cloud":
+        _chroma_client = chromadb.CloudClient(
+            tenant=config.CHROMA_TENANT,
+            database=config.CHROMA_DATABASE,
+            api_key=config.CHROMA_API_KEY,
+        )
+    elif mode == "server":
+        _chroma_client = chromadb.HttpClient(
+            host=config.CHROMA_HOST,
+            port=config.CHROMA_PORT,
+        )
+    else:
+        _chroma_client = chromadb.PersistentClient(path=str(config.CHROMA_PERSIST_DIR))
+
+    return _chroma_client
+
 
 def _get_collection(user_id: int):
     """Get or create the per-user ChromaDB collection for code chunks."""
-    client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
-    return client.get_or_create_collection(
+    return _get_client().get_or_create_collection(
         name=f"autopatch_code_{user_id}",
         metadata={"hnsw:space": "cosine"},
     )

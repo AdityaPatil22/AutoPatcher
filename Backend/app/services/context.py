@@ -62,7 +62,7 @@ def _search_with_fallback(
 def _find_referenced_files(query: str, *, user_id: int) -> list[dict]:
     """Directly locate files mentioned by path in the query by walking the indexed repository."""
     file_refs = extract_file_references(query)
-    if not file_refs or not config.CHROMA_PERSIST_DIR:
+    if not file_refs:
         return []
 
     from app.services.indexer import get_indexed_files

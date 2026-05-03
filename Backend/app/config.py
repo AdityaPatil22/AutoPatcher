@@ -39,3 +39,12 @@ CHROMA_PERSIST_DIR: Path = Path(
     os.getenv("CHROMA_PERSIST_DIR", str(Path(__file__).resolve().parent.parent.parent / ".chroma_index"))
 )
 CLONE_DIR: Path = Path(os.getenv("CLONE_DIR", str(Path(tempfile.gettempdir()) / "autopatch_clones")))
+
+# --- ChromaDB client mode ---
+# "local" = PersistentClient on disk (default), "cloud" = Chroma Cloud, "server" = self-hosted HttpClient
+CHROMA_MODE: str = os.getenv("CHROMA_MODE", "local")
+CHROMA_API_KEY: str = os.getenv("CHROMA_API_KEY", "")
+CHROMA_TENANT: str = os.getenv("CHROMA_TENANT", "")
+CHROMA_DATABASE: str = os.getenv("CHROMA_DATABASE", "")
+CHROMA_HOST: str = os.getenv("CHROMA_HOST", "localhost")
+CHROMA_PORT: int = int(os.getenv("CHROMA_PORT", "8000"))
