@@ -34,10 +34,18 @@ export default function App() {
         toggleTheme={toggleTheme}
         onOpenIndexModal={() => setShowIndexModal(true)}
         auth={auth}
+        repoName={settings.repoName}
       />
 
       <main className="layout">
-        <InputPanel settings={settings} patchGen={patchGen} />
+        <InputPanel
+          settings={settings}
+          patchGen={patchGen}
+          isLoggedIn={auth.isLoggedIn}
+          isIndexed={indexState === "ready"}
+          onLogin={auth.login}
+          onOpenIndexModal={() => setShowIndexModal(true)}
+        />
 
         <OutputPanel
           error={patchGen.error}
@@ -54,6 +62,11 @@ export default function App() {
           setFeedback={patchGen.setFeedback}
           handleRefineFix={patchGen.handleRefineFix}
           hasRepoScope={auth.user?.has_repo_scope ?? false}
+          isLoggedIn={auth.isLoggedIn}
+          indexState={indexState}
+          onLogin={auth.login}
+          onOpenIndexModal={() => setShowIndexModal(true)}
+          repoName={settings.repoName}
         />
       </main>
 

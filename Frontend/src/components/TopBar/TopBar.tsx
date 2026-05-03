@@ -9,6 +9,7 @@ interface TopBarProps {
   toggleTheme: () => void;
   onOpenIndexModal: () => void;
   auth: UseAuthReturn;
+  repoName: string | null;
 }
 
 export default function TopBar({
@@ -18,6 +19,7 @@ export default function TopBar({
   toggleTheme,
   onOpenIndexModal,
   auth,
+  repoName,
 }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -39,10 +41,22 @@ export default function TopBar({
         <span>AutoPatch AI</span>
       </div>
       <div className="top-actions">
-        <div className={`index-status ${indexState}`}>
+        <button
+          className={`index-status ${indexState}`}
+          onClick={onOpenIndexModal}
+          type="button"
+          title={indexState === "ready" ? "Change indexed repository" : "Index a repository"}
+        >
           <span className="status-dot" />
-          <span>{indexStatusText}</span>
-        </div>
+          <span>
+            {indexState === "ready" && repoName
+              ? repoName
+              : indexStatusText}
+          </span>
+          {indexState === "ready" && (
+            <span className="index-badge">indexed</span>
+          )}
+        </button>
         <button
           className="theme-toggle"
           onClick={toggleTheme}
@@ -68,14 +82,6 @@ export default function TopBar({
             </svg>
           )}
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={onOpenIndexModal}
-          type="button"
-        >
-          Index Repository
-        </button>
-
         {auth.isLoggedIn && auth.user ? (
           <div className="user-menu-wrapper">
             <button

@@ -11,6 +11,7 @@ export function useSettings() {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("local");
   const [modelName, setModelName] = useState("");
   const [maxContextFiles, setMaxContextFilesState] = useState(3);
+  const [repoName, setRepoName] = useState<string | null>(null);
 
   const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -20,6 +21,12 @@ export function useSettings() {
       setMaxContextFilesState(s.max_context_files);
       setLlmProvider(s.provider);
       setModelName(s.model);
+      if (s.repo_path) {
+        const parts = s.repo_path.replace(/\/+$/, "").split("/");
+        setRepoName(parts[parts.length - 1] || null);
+      } else {
+        setRepoName(null);
+      }
     } catch {
       /* backend not reachable */
     }
@@ -62,6 +69,7 @@ export function useSettings() {
     llmProvider,
     modelName,
     maxContextFiles,
+    repoName,
     fetchSettings,
     handleProviderChange,
     handleModelInput,

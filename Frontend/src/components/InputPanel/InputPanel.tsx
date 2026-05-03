@@ -5,13 +5,25 @@ import "./InputPanel.css";
 interface InputPanelProps {
   settings: UseSettingsReturn;
   patchGen: UsePatchGenerationReturn;
+  isLoggedIn: boolean;
+  isIndexed: boolean;
+  onLogin: () => void;
+  onOpenIndexModal: () => void;
 }
 
-export default function InputPanel({ settings, patchGen }: InputPanelProps) {
+export default function InputPanel({
+  settings,
+  patchGen,
+  isLoggedIn,
+  isIndexed,
+  onLogin,
+  onOpenIndexModal,
+}: InputPanelProps) {
   const {
     llmProvider,
     modelName,
     maxContextFiles,
+    repoName,
     handleProviderChange,
     handleModelInput,
     handleMaxContextFilesChange,
@@ -26,9 +38,11 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
     handleGenerateFix,
   } = patchGen;
 
+  const canGenerate = isLoggedIn && isIndexed && !loading;
+
   return (
     <section className="panel input-panel">
-      <h2>Add Bug Details</h2>
+      <h2>Bug Details</h2>
       <form onSubmit={handleGenerateFix}>
         <div className="form-group">
           <label htmlFor="title">Title</label>
@@ -157,10 +171,35 @@ export default function InputPanel({ settings, patchGen }: InputPanelProps) {
             </button>
           </div>
         </div>
+        {!isLoggedIn && (
+          <div className="form-prereq">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>
+              <button type="button" className="inline-link" onClick={onLogin}>Sign in with GitHub</button> to get started
+            </span>
+          </div>
+        )}
+
+        {isLoggedIn && !isIndexed && (
+          <div className="form-prereq">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>
+              <button type="button" className="inline-link" onClick={onOpenIndexModal}>Index a repository</button> before generating fixes
+            </span>
+          </div>
+        )}
+
+        {isLoggedIn && isIndexed && repoName && (
+          <div className="form-repo-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            <span>{repoName}</span>
+          </div>
+        )}
+
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={loading}
+          disabled={!canGenerate}
         >
           {loading && <span className="spinner-inline" />}
           {loading ? "Generating..." : "Generate Fix"}

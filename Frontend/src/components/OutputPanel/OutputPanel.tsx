@@ -22,6 +22,11 @@ interface OutputPanelProps {
   setFeedback: (v: string) => void;
   handleRefineFix: () => void;
   hasRepoScope: boolean;
+  isLoggedIn: boolean;
+  indexState: "checking" | "ready" | "empty" | "error";
+  onLogin: () => void;
+  onOpenIndexModal: () => void;
+  repoName: string | null;
 }
 
 export default function OutputPanel({
@@ -32,13 +37,17 @@ export default function OutputPanel({
   refineLoading,
   result,
   showRawJson,
-  setShowRawJson,
   treeRefreshKey,
   handleGenerateFix,
   feedback,
   setFeedback,
   handleRefineFix,
   hasRepoScope,
+  isLoggedIn,
+  indexState,
+  onLogin,
+  onOpenIndexModal,
+  repoName,
 }: OutputPanelProps) {
   const [refineOpen, setRefineOpen] = useState(false);
   const [prLoading, setPrLoading] = useState(false);
@@ -78,6 +87,12 @@ export default function OutputPanel({
     }
   }
 
+  const stepsDone = {
+    login: isLoggedIn,
+    index: indexState === "ready",
+    describe: false,
+  };
+
   return (
     <section className="panel output-panel">
       {error && (
@@ -95,21 +110,53 @@ export default function OutputPanel({
 
       {!result && !loading && (
         <div className="empty-state">
-          <svg
-            width="64"
-            height="64"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            opacity="0.3"
-          >
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <polyline points="14,2 14,8 20,8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          <p>Submit a bug ticket to generate patches</p>
+          <div className="onboarding">
+            <h3 className="onboarding-title">How it works</h3>
+            <p className="onboarding-subtitle">
+              AutoPatch AI generates code fixes from bug descriptions and opens PRs for you.
+            </p>
+            <div className="onboarding-steps">
+              <div className={`onboarding-step ${stepsDone.login ? "done" : "active"}`}>
+                <div className="onboarding-step-num">{stepsDone.login ? "\u2713" : "1"}</div>
+                <div className="onboarding-step-body">
+                  <span className="onboarding-step-label">Sign in with GitHub</span>
+                  <span className="onboarding-step-desc">
+                    {stepsDone.login ? "You're signed in" : "Connect your GitHub account to get started"}
+                  </span>
+                  {!stepsDone.login && (
+                    <button className="btn btn-sm onboarding-action" onClick={onLogin} type="button">
+                      Sign in
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className={`onboarding-step ${stepsDone.index ? "done" : stepsDone.login ? "active" : ""}`}>
+                <div className="onboarding-step-num">{stepsDone.index ? "\u2713" : "2"}</div>
+                <div className="onboarding-step-body">
+                  <span className="onboarding-step-label">Index a repository</span>
+                  <span className="onboarding-step-desc">
+                    {stepsDone.index
+                      ? `Repository indexed${repoName ? `: ${repoName}` : ""}`
+                      : "Point AutoPatch to your codebase so it can understand the code"}
+                  </span>
+                  {!stepsDone.index && stepsDone.login && (
+                    <button className="btn btn-sm onboarding-action" onClick={onOpenIndexModal} type="button">
+                      Index repo
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className={`onboarding-step ${stepsDone.index && stepsDone.login ? "active" : ""}`}>
+                <div className="onboarding-step-num">3</div>
+                <div className="onboarding-step-body">
+                  <span className="onboarding-step-label">Describe a bug &amp; generate fix</span>
+                  <span className="onboarding-step-desc">
+                    Fill in the bug details to generate a fix.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -120,28 +167,32 @@ export default function OutputPanel({
       {result && (
         <div className="results">
           <div className="results-header">
-            <h2>{result.ticket_title}</h2>
-            <div className="results-actions">
+            <div className="results-title-row">
+              <h2>{result.ticket_title}</h2>
               <span className="patch-count">
                 {result.patches.length} file
                 {result.patches.length !== 1 ? "s" : ""} patched
               </span>
+            </div>
+            <div className="results-actions">
               <button
                 className={`btn-refine ${refineOpen ? "open" : ""}`}
                 onClick={() => setRefineOpen(!refineOpen)}
                 type="button"
+                title="Provide feedback to regenerate the fix"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
-                Refine Fix
+                Refine
               </button>
               <button
                 className="btn-create-pr"
                 onClick={handleCreatePR}
                 disabled={prLoading || !!prResult}
                 type="button"
+                title={repoName ? `Open PR on ${repoName}` : "Create a Pull Request on GitHub"}
               >
                 {prLoading ? (
                   <>
@@ -167,27 +218,23 @@ export default function OutputPanel({
                   </>
                 )}
               </button>
-              <button
-                className={`btn-json ${showRawJson ? "active" : ""}`}
-                onClick={() => setShowRawJson(!showRawJson)}
-                type="button"
-              >
-                {showRawJson ? "Hide" : "Show"} JSON
-              </button>
             </div>
           </div>
 
           {prResult && (
             <div className="pr-success-banner">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="18" r="3" />
-                <circle cx="6" cy="6" r="3" />
-                <path d="M13 6h3a2 2 0 012 2v7" />
-                <line x1="6" y1="9" x2="6" y2="21" />
-              </svg>
-              <span>
-                Pull Request #{prResult.pr_number} created on branch <code>{prResult.branch}</code>
-              </span>
+              <div className="pr-success-content">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="18" r="3" />
+                  <circle cx="6" cy="6" r="3" />
+                  <path d="M13 6h3a2 2 0 012 2v7" />
+                  <line x1="6" y1="9" x2="6" y2="21" />
+                </svg>
+                <div className="pr-success-text">
+                  <strong>Pull Request #{prResult.pr_number}</strong>
+                  <span>Branch: <code>{prResult.branch}</code></span>
+                </div>
+              </div>
               <a href={prResult.pr_url} target="_blank" rel="noopener noreferrer" className="pr-link">
                 View on GitHub &rarr;
               </a>

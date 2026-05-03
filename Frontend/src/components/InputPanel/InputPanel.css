@@ -115,3 +115,55 @@
 .stepper-input:focus {
   box-shadow: none;
 }
+
+.form-prereq {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--primary-bg);
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--primary);
+}
+
+.form-prereq svg {
+  flex-shrink: 0;
+}
+
+.inline-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inline-link:hover {
+  color: var(--primary-hover);
+}
+
+.form-repo-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--green-bg);
+  border: 1px solid rgba(46, 160, 67, 0.2);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--green);
+}
+
+.form-repo-badge svg {
+  flex-shrink: 0;
+}
