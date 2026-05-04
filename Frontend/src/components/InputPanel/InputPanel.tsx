@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import type { UseSettingsReturn } from "../../hooks/useSettings";
 import type { UsePatchGenerationReturn } from "../../hooks/usePatchGeneration";
+import { isOllamaRunning, listOllamaModels } from "../../api/localLLM";
 import "./InputPanel.css";
 
 interface InputPanelProps {
@@ -37,6 +39,33 @@ export default function InputPanel({
     loading,
     handleGenerateFix,
   } = patchGen;
+
+  const [ollamaStatus, setOllamaStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (llmProvider !== "browser") return;
+
+    let cancelled = false;
+
+    async function check() {
+      setOllamaStatus("checking");
+      const running = await isOllamaRunning();
+      if (cancelled) return;
+      setOllamaStatus(running ? "online" : "offline");
+
+      if (running) {
+        const models = await listOllamaModels();
+        if (!cancelled) setOllamaModels(models);
+      } else {
+        setOllamaModels([]);
+      }
+    }
+
+    check();
+    const interval = setInterval(check, 10_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [llmProvider]);
 
   const canGenerate = isLoggedIn && isIndexed && !loading;
 
@@ -90,10 +119,11 @@ export default function InputPanel({
           <div className="search-mode-toggle">
             <button
               type="button"
-              className={`mode-btn ${llmProvider === "local" ? "active" : ""}`}
-              onClick={() => handleProviderChange("local")}
+              className={`mode-btn ${llmProvider === "browser" ? "active" : ""}`}
+              onClick={() => handleProviderChange("browser")}
+              title="Run LLM on your machine via Ollama"
             >
-              Local
+              Local (Ollama)
             </button>
             <button
               type="button"
@@ -105,16 +135,58 @@ export default function InputPanel({
           </div>
         </div>
 
-        {llmProvider === "local" && (
-          <div className="form-group">
-            <label htmlFor="modelName">Model Name</label>
-            <input
-              id="modelName"
-              value={modelName}
-              onChange={(e) => handleModelInput(e.target.value)}
-              placeholder="e.g. llama3:8b, deepseek-coder:6.7b"
-            />
-          </div>
+        {llmProvider === "browser" && (
+          <>
+            <div className={`ollama-status ollama-${ollamaStatus}`}>
+              <div className="ollama-status-row">
+                <span className="ollama-dot" />
+                <span className="ollama-label">
+                  {ollamaStatus === "checking" && "Checking Ollama..."}
+                  {ollamaStatus === "online" && "Ollama connected"}
+                  {ollamaStatus === "offline" && "Ollama not detected"}
+                </span>
+                {ollamaStatus === "online" && (
+                  <span className="ollama-badge">{ollamaModels.length} model{ollamaModels.length !== 1 ? "s" : ""}</span>
+                )}
+              </div>
+              {ollamaStatus === "offline" && (
+                <div className="ollama-help">
+                  <p>To use this feature, install and run Ollama locally on your system.</p>
+                  <ol className="ollama-steps">
+                    <li>Install from <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
+                    <li>Pull a model: <code>ollama pull llama3</code></li>
+                    <li>Enable browser access: <code>OLLAMA_ORIGINS=* ollama serve</code></li>
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="browserModel">Model</label>
+              {ollamaModels.length > 0 ? (
+                <div className="model-select-wrapper">
+                  <select
+                    id="browserModel"
+                    className="model-select"
+                    value={modelName}
+                    onChange={(e) => handleModelInput(e.target.value)}
+                  >
+                    {!modelName && <option value="">Select a model...</option>}
+                    {ollamaModels.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <input
+                  id="browserModel"
+                  value={modelName}
+                  onChange={(e) => handleModelInput(e.target.value)}
+                  placeholder="e.g. llama3, deepseek-coder:6.7b"
+                />
+              )}
+            </div>
+          </>
         )}
 
         {llmProvider === "gemini" && (

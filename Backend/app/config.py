@@ -10,9 +10,8 @@ load_dotenv()
 
 # --- LLM ---
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "local")
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "browser")
 LLM_MODEL: str = os.getenv("LLM_MODEL", "")
-LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1")
 
 # --- Security / CORS ---
 _origins_raw = os.getenv("ALLOWED_ORIGINS", "*").strip()

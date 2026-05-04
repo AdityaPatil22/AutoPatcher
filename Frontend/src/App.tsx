@@ -15,7 +15,10 @@ export default function App() {
   const { indexState, indexStatusText, fetchIndex } = useIndex();
   const settings = useSettings();
   const auth = useAuth();
-  const patchGen = usePatchGeneration();
+  const patchGen = usePatchGeneration({
+    llmProvider: settings.llmProvider,
+    modelName: settings.modelName,
+  });
 
   const [showIndexModal, setShowIndexModal] = useState(false);
   const [treeRefreshKey, setTreeRefreshKey] = useState(0);

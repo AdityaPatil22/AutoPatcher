@@ -16,37 +16,11 @@ def _scrub_key(text: str) -> str:
 def call_llm(messages: list[dict]) -> dict:
     """Call the configured LLM provider and return parsed JSON response."""
     try:
-        if config.LLM_PROVIDER == "local":
-            raw = _call_local(messages)
-        else:
-            raw = _call_gemini(messages)
+        raw = _call_gemini(messages)
     except Exception as exc:
         raise RuntimeError(_scrub_key(str(exc))) from None
 
     return _parse_response(raw)
-
-
-def _call_local(messages: list[dict]) -> str:
-    """Send messages to a local LLM server (Ollama, LM Studio, etc.) via OpenAI-compatible API."""
-    from openai import OpenAI
-
-    client = OpenAI(base_url=config.LOCAL_LLM_BASE_URL, api_key="not-needed")
-    model = config.LLM_MODEL or "llama3:8b"
-
-    kwargs: dict = dict(
-        model=model,
-        messages=messages,
-        temperature=0.2,
-        max_tokens=8192,
-    )
-    try:
-        kwargs["response_format"] = {"type": "json_object"}
-        response = client.chat.completions.create(**kwargs)
-    except Exception:
-        del kwargs["response_format"]
-        response = client.chat.completions.create(**kwargs)
-
-    return response.choices[0].message.content
 
 
 def _call_gemini(messages: list[dict]) -> str:

@@ -8,7 +8,7 @@ import {
 import type { LLMProvider } from "../types";
 
 export function useSettings() {
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("local");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("browser");
   const [modelName, setModelName] = useState("");
   const [maxContextFiles, setMaxContextFilesState] = useState(3);
   const [repoName, setRepoName] = useState<string | null>(null);

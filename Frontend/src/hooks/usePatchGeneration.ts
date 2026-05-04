@@ -1,8 +1,20 @@
 import { useRef, useState } from "react";
-import { generateFix, refineFix } from "../api/patches";
-import type { PatchOutput, TicketInput } from "../types";
+import {
+  buildPatches,
+  generateFix,
+  generatePrompt,
+  refineFix,
+  refinePrompt,
+} from "../api/patches";
+import { callLocalLLM, isOllamaRunning, type OllamaChatMessage } from "../api/localLLM";
+import type { LLMProvider, PatchOutput, TicketInput } from "../types";
 
-export function usePatchGeneration() {
+interface PatchGenOptions {
+  llmProvider: LLMProvider;
+  modelName: string;
+}
+
+export function usePatchGeneration({ llmProvider, modelName }: PatchGenOptions) {
   const [ticket, setTicket] = useState<TicketInput>({
     title: "",
     description: "",
@@ -45,7 +57,14 @@ export function usePatchGeneration() {
       };
       if (fileHint.trim()) payload.file_hint = fileHint;
 
-      const data = await generateFix(payload);
+      let data: PatchOutput;
+
+      if (llmProvider === "browser") {
+        data = await _browserLocalGenerate(payload);
+      } else {
+        data = await generateFix(payload);
+      }
+
       setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -56,6 +75,35 @@ export function usePatchGeneration() {
     }
   }
 
+  async function _browserLocalGenerate(payload: TicketInput): Promise<PatchOutput> {
+    const running = await isOllamaRunning();
+    if (!running) {
+      throw new Error(
+        "Ollama is not running. Please install and run Ollama locally to use this feature."
+      );
+    }
+
+    setLoadingStep(1);
+    const promptData = await generatePrompt(payload);
+
+    setLoadingStep(2);
+    const messages = promptData.messages.map((m) => ({
+      role: m.role as OllamaChatMessage["role"],
+      content: m.content,
+    }));
+    const model = modelName.trim() || promptData.model_hint;
+    const rawResponse = await callLocalLLM(messages, model);
+
+    if (!rawResponse.trim()) {
+      throw new Error("Local LLM returned an empty response. Try a different model.");
+    }
+
+    return buildPatches({
+      session_id: promptData.session_id,
+      raw_response: rawResponse,
+    });
+  }
+
   async function handleRefineFix() {
     if (!feedback.trim() || !result) return;
 
@@ -63,13 +111,22 @@ export function usePatchGeneration() {
     setError("");
 
     try {
-      const data = await refineFix({
+      const refineInput = {
         title: ticket.title,
         description: ticket.description,
         feedback,
         file_hint: fileHint.trim() || undefined,
         previous_patches: result.patches,
-      });
+      };
+
+      let data: PatchOutput;
+
+      if (llmProvider === "browser") {
+        data = await _browserLocalRefine(refineInput);
+      } else {
+        data = await refineFix(refineInput);
+      }
+
       setResult(data);
       setFeedback("");
     } catch (e) {
@@ -77,6 +134,35 @@ export function usePatchGeneration() {
     } finally {
       setRefineLoading(false);
     }
+  }
+
+  async function _browserLocalRefine(
+    refineInput: Parameters<typeof refineFix>[0]
+  ): Promise<PatchOutput> {
+    const running = await isOllamaRunning();
+    if (!running) {
+      throw new Error(
+        "Ollama is not running. Please install and run Ollama locally to use this feature."
+      );
+    }
+
+    const promptData = await refinePrompt(refineInput);
+
+    const messages = promptData.messages.map((m) => ({
+      role: m.role as OllamaChatMessage["role"],
+      content: m.content,
+    }));
+    const model = modelName.trim() || promptData.model_hint;
+    const rawResponse = await callLocalLLM(messages, model);
+
+    if (!rawResponse.trim()) {
+      throw new Error("Local LLM returned an empty response. Try a different model.");
+    }
+
+    return buildPatches({
+      session_id: promptData.session_id,
+      raw_response: rawResponse,
+    });
   }
 
   return {

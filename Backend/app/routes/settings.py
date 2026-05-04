@@ -23,6 +23,7 @@ def get_settings(user: User | None = Depends(get_current_user_optional)):
         "gemini_available": bool(config.GEMINI_API_KEY),
         "max_context_files": config.MAX_CONTEXT_FILES,
         "repo_path": user.repo_path if user else None,
+        "ollama_url": "http://localhost:11434",
     }
 
 

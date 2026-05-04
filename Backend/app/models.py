@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field, model_validator
 
 class LLMProviderEnum(str, Enum):
     """Supported LLM provider backends."""
-    local = "local"
     gemini = "gemini"
+    browser = "browser"
 
 
 
@@ -77,6 +77,20 @@ class ModelRequest(BaseModel):
 class MaxContextFilesRequest(BaseModel):
     """Request to change the max number of context files sent to the LLM."""
     max_files: int = Field(..., ge=1, le=20)
+
+
+class PromptOutput(BaseModel):
+    """Response from /generate-prompt containing the LLM prompt and a session ID for context reuse."""
+    session_id: str
+    prompt: str = Field(..., description="Flattened prompt string for Ollama /api/generate")
+    messages: list[dict] = Field(..., description="Chat messages for Ollama /api/chat")
+    model_hint: str = Field(default="llama3", description="Suggested model name")
+
+
+class BuildPatchesRequest(BaseModel):
+    """Submit raw LLM output to be parsed into patches using a stored prompt session."""
+    session_id: str = Field(..., min_length=1)
+    raw_response: str = Field(..., min_length=1)
 
 
 class CreatePRRequest(BaseModel):

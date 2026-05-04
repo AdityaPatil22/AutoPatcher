@@ -20,7 +20,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     and a more generous global limit to everything else.
     """
 
-    LLM_PATHS = {"/api/generate-fix", "/api/refine-fix"}
+    LLM_PATHS = {"/api/generate-fix", "/api/refine-fix", "/api/generate-prompt", "/api/refine-prompt"}
 
     def __init__(self, app, global_rpm: int = 60, llm_rpm: int = 10):
         super().__init__(app)

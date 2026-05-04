@@ -34,7 +34,7 @@ export interface User {
   has_repo_scope: boolean;
 }
 
-export type LLMProvider = "local" | "gemini";
+export type LLMProvider = "gemini" | "browser";
 
 export interface Settings {
   provider: LLMProvider;
@@ -42,6 +42,19 @@ export interface Settings {
   gemini_available: boolean;
   max_context_files: number;
   repo_path: string | null;
+  ollama_url: string;
+}
+
+export interface PromptOutput {
+  session_id: string;
+  prompt: string;
+  messages: { role: string; content: string }[];
+  model_hint: string;
+}
+
+export interface BuildPatchesRequest {
+  session_id: string;
+  raw_response: string;
 }
 
 export interface IndexStatus {
