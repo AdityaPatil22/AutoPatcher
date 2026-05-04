@@ -17,7 +17,9 @@ Bug Ticket → GitHub OAuth → Index Repo → Context Search → LLM Prompt →
 3. **Input** a bug report (title + description) via the React frontend
 4. **Context fetch** runs hybrid search (keyword + semantic) over indexed code
 5. **Prompt builder** constructs a structured prompt with the bug + relevant code context
-6. **LLM** (Google Gemini or local Ollama) analyzes the bug and returns fixed code
+6. **LLM** analyzes the bug and returns fixed code — two modes:
+   - **Gemini (Cloud)** — backend calls the Google Gemini API
+   - **Local (Ollama)** — backend prepares the prompt, your browser calls your local Ollama instance directly, then sends the result back for patch generation. No LLM data leaves your machine.
 7. **Diff generator** produces a unified diff showing exactly what changed
 8. **Create PR** — one click to push the fix as a GitHub Pull Request via the GitHub API
 
@@ -30,7 +32,7 @@ Bug Ticket → GitHub OAuth → Index Repo → Context Search → LLM Prompt →
 | **Database** | PostgreSQL (SQLAlchemy ORM) | Neon Console (serverless) |
 | **Vector DB** | ChromaDB (semantic search) | Chroma Cloud |
 | **Auth** | GitHub OAuth 2.0, JWT, Fernet | — |
-| **LLM** | Google Gemini API / Ollama | Cloud / Local |
+| **LLM** | Google Gemini API (cloud) / Ollama (browser-local) | Cloud / User's machine |
 | **VCS** | GitHub REST API v3 | — |
 | **Container** | Multi-stage Docker build | Railway |
 
@@ -47,7 +49,7 @@ Bug Ticket → GitHub OAuth → Index Repo → Context Search → LLM Prompt →
 - **Auth Service** — GitHub OAuth callback, JWT session cookies, Fernet-encrypted token storage
 - **Context Service** — Hybrid search with fallback chain (semantic → keyword)
 - **Indexer Service** — Clones GitHub repos, chunks code into overlapping segments, stores in ChromaDB
-- **LLM Service** — Multi-provider support (Gemini with thinking + search, Ollama via OpenAI-compatible API)
+- **LLM Service** — Gemini with thinking + search (cloud), or browser-local Ollama via prompt handoff
 - **Prompt Builder** — Structured prompt construction with bug context and relevant code
 - **GitHub PR Service** — Branch creation, atomic commits via Git Trees API, pull request creation
 - **Diff Generator** — Unified diff output with fuzzy patch application
@@ -60,8 +62,8 @@ Bug Ticket → GitHub OAuth → Index Repo → Context Search → LLM Prompt →
 ### External APIs
 - **GitHub OAuth 2.0** — Authentication and authorization
 - **GitHub REST API v3** — Repository operations, branch/tree/commit/PR management
-- **Google Gemini API** — LLM inference (gemini-2.5-flash, gemini-3-flash-preview)
-- **Ollama** (optional) — Local LLM via OpenAI-compatible API
+- **Google Gemini API** — Cloud LLM inference (gemini-2.5-flash, gemini-3-flash-preview)
+- **Ollama** (optional) — Local LLM running on the user's machine, called directly from the browser
 
 ## Quick Start
 
@@ -107,15 +109,9 @@ The frontend runs at `http://localhost:5173` and proxies API calls to the backen
 # Build the multi-stage image
 docker build -t autopatch-ai .
 
-# Run with cloud LLM
+# Run the container
 docker run -d --name autopatch -p 8000:8000 \
   --env-file Backend/.env \
-  autopatch-ai
-
-# Run with a local LLM (Ollama on host)
-docker run -d --name autopatch -p 8000:8000 \
-  -e LLM_PROVIDER=local \
-  -e LOCAL_LLM_BASE_URL=http://host.docker.internal:11434/v1 \
   autopatch-ai
 ```
 
@@ -130,6 +126,47 @@ The project is configured for Railway with a single-container deployment:
 3. Railway auto-builds using the `Dockerfile` (multi-stage: Node build → Python runtime)
 4. The backend serves the built frontend static files from `/Frontend/dist`
 
+## Local LLM (Ollama) Setup
+
+AutoPatch AI supports a **hybrid architecture** where the deployed backend handles context retrieval and prompt building, while the LLM runs entirely on your local machine via [Ollama](https://ollama.com). Your code and prompts never leave your machine.
+
+### How it works
+
+```
+Browser → Backend (prepare prompt) → Browser → Local Ollama (generate) → Backend (parse into patches)
+```
+
+The backend is the "brain" (context, search, prompt construction, patch parsing). Your machine is the "compute" (LLM inference).
+
+### Setup
+
+1. **Install Ollama** from [ollama.com](https://ollama.com)
+2. **Pull a model:**
+   ```bash
+   ollama pull llama3
+   ```
+3. **Start Ollama with CORS enabled** (required for browser access):
+   ```bash
+   OLLAMA_ORIGINS=* ollama serve
+   ```
+   To make CORS permanent on macOS:
+   ```bash
+   launchctl setenv OLLAMA_ORIGINS "*"
+   ```
+   Then restart the Ollama app normally.
+
+4. **Select "Local (Ollama)"** in the LLM Provider toggle on the app
+5. Pick a model from the auto-detected dropdown and generate fixes as usual
+
+### Recommended models
+
+| Model | Size | Best for |
+|-------|------|----------|
+| `llama3` | 8B | General-purpose, fast |
+| `qwen2.5-coder:32b` | 32B | High-quality code fixes (needs 20GB+ RAM) |
+| `deepseek-coder:6.7b` | 6.7B | Lightweight code-focused |
+| `codellama:13b` | 13B | Good balance of quality and speed |
+
 ## Configuration
 
 Copy `Backend/.env.example` to `Backend/.env` and configure:
@@ -138,10 +175,9 @@ Copy `Backend/.env.example` to `Backend/.env` and configure:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_PROVIDER` | `local` | `local` (Ollama) or `gemini` |
-| `LLM_MODEL` | — | Model name (e.g. `gemini-2.5-flash`, `llama3:8b`) |
-| `GEMINI_API_KEY` | — | Google Gemini API key |
-| `LOCAL_LLM_BASE_URL` | `http://localhost:11434/v1` | Ollama / LM Studio API URL |
+| `LLM_PROVIDER` | `browser` | `browser` (local Ollama via user's browser) or `gemini` (cloud) |
+| `LLM_MODEL` | — | Model name (e.g. `gemini-2.5-flash`, `llama3`) |
+| `GEMINI_API_KEY` | — | Google Gemini API key (required for Gemini mode) |
 
 ### GitHub OAuth
 
@@ -205,8 +241,11 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/generate-fix` | Generate a patch from a bug ticket |
-| `POST` | `/api/refine-fix` | Refine a patch with feedback |
+| `POST` | `/api/generate-fix` | Generate a patch from a bug ticket (cloud LLM) |
+| `POST` | `/api/refine-fix` | Refine a patch with feedback (cloud LLM) |
+| `POST` | `/api/generate-prompt` | Get the LLM prompt for browser-local mode |
+| `POST` | `/api/refine-prompt` | Get a refinement prompt for browser-local mode |
+| `POST` | `/api/build-patches` | Submit raw LLM output to build patches |
 
 ### Repository Indexing
 
@@ -278,7 +317,7 @@ AutoPatch-AI/
 │       ├── constants.py         # Supported extensions, skip dirs
 │       ├── routes/
 │       │   ├── auth.py          # GitHub OAuth + session management
-│       │   ├── fix.py           # /generate-fix, /refine-fix
+│       │   ├── fix.py           # /generate-fix, /refine-fix, /generate-prompt, /build-patches
 │       │   ├── index.py         # /index, /index/status, /index/files
 │       │   ├── pr.py            # /create-pr (GitHub PR creation)
 │       │   └── settings.py      # /settings (LLM provider config)
@@ -288,7 +327,7 @@ AutoPatch-AI/
 │       │   ├── search_keyword.py # Keyword-based code search
 │       │   ├── search_semantic.py # Semantic search via ChromaDB
 │       │   ├── prompt.py        # LLM prompt construction
-│       │   ├── llm.py           # LLM provider calls (Gemini / Ollama)
+│       │   ├── llm.py           # LLM provider calls (Gemini) + response parsing
 │       │   └── github.py        # GitHub API (branches, commits, PRs)
 │       └── utils/
 │           ├── diff.py          # Unified diff generator
@@ -299,7 +338,12 @@ AutoPatch-AI/
 │   └── src/
 │       ├── App.tsx              # Root component
 │       ├── App.css              # Global styles
-│       ├── api.ts               # API client
+│       ├── api/
+│       │   ├── client.ts        # API client (fetch wrapper)
+│       │   ├── patches.ts       # Patch generation + browser-local API calls
+│       │   ├── localLLM.ts      # Direct Ollama communication (health check, chat, model list)
+│       │   ├── settings.ts      # Settings API
+│       │   └── indexing.ts      # Indexing API
 │       ├── types.ts             # TypeScript type definitions
 │       ├── hooks/               # Custom React hooks
 │       │   ├── useAuth.ts       # GitHub OAuth state
