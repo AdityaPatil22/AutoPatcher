@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { indexRepository } from "../../api/indexing";
+import { clearIndex, indexRepository } from "../../api/indexing";
 import type { IndexResult } from "../../types";
 import "./IndexModal.css";
 
-type Phase = "idle" | "indexing" | "success" | "error";
+type Phase = "idle" | "indexing" | "success" | "error" | "confirm-clear" | "clearing" | "cleared";
 type SourceTab = "local" | "github";
 
 const GITHUB_URL_RE = /^https:\/\/github\.com\/[\w.\-]+\/[\w.\-]+\/?$/;
@@ -12,9 +12,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onIndexed: () => void;
+  isIndexed: boolean;
+  repoName: string | null;
 }
 
-export default function IndexModal({ open, onClose, onIndexed }: Props) {
+export default function IndexModal({ open, onClose, onIndexed, isIndexed, repoName }: Props) {
   const [tab, setTab] = useState<SourceTab>("github");
   const [repoPath, setRepoPath] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
@@ -28,7 +30,7 @@ export default function IndexModal({ open, onClose, onIndexed }: Props) {
     tab === "local" ? !!repoPath.trim() : GITHUB_URL_RE.test(githubUrl.trim());
 
   function handleClose() {
-    if (phase !== "indexing") {
+    if (phase !== "indexing" && phase !== "clearing") {
       setPhase("idle");
       setResult(null);
       setErrorMsg("");
@@ -56,6 +58,18 @@ export default function IndexModal({ open, onClose, onIndexed }: Props) {
     }
   }
 
+  async function handleClear() {
+    setPhase("clearing");
+    try {
+      await clearIndex();
+      setPhase("cleared");
+      onIndexed();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to clear index");
+      setPhase("error");
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -77,6 +91,22 @@ export default function IndexModal({ open, onClose, onIndexed }: Props) {
 
         {phase === "idle" && (
           <>
+            {isIndexed && repoName && (
+              <div className="modal-current-repo">
+                <div className="modal-current-repo-info">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                  <span>Currently indexed: <strong>{repoName}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-clear-index"
+                  onClick={() => setPhase("confirm-clear")}
+                >
+                  Clear Index
+                </button>
+              </div>
+            )}
+
             <div className="modal-tabs">
               <button
                 type="button"
@@ -210,6 +240,55 @@ export default function IndexModal({ open, onClose, onIndexed }: Props) {
                 type="button"
               >
                 Try Again
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === "confirm-clear" && (
+          <>
+            <div className="modal-clear-confirm">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+              <div>
+                <p className="modal-clear-title">Clear index for {repoName}?</p>
+                <p className="modal-clear-desc">This will remove all indexed data. You'll need to re-index before generating fixes.</p>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setPhase("idle")} type="button">
+                Cancel
+              </button>
+              <button className="btn btn-danger btn-modal" onClick={handleClear} type="button">
+                Clear Index
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === "clearing" && (
+          <div className="modal-indexing">
+            <div className="modal-progress-bar">
+              <div className="modal-progress-fill" />
+            </div>
+            <p className="modal-indexing-text">Clearing index...</p>
+          </div>
+        )}
+
+        {phase === "cleared" && (
+          <>
+            <div className="modal-success-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <p className="modal-success-title">Index cleared successfully</p>
+            <div className="modal-actions">
+              <button className="btn btn-primary btn-modal" onClick={handleClose} type="button">
+                Done
               </button>
             </div>
           </>

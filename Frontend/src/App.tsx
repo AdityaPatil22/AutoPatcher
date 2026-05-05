@@ -78,8 +78,11 @@ export default function App() {
         onClose={() => setShowIndexModal(false)}
         onIndexed={() => {
           fetchIndex();
+          settings.fetchSettings();
           setTreeRefreshKey((k) => k + 1);
         }}
+        isIndexed={indexState === "ready"}
+        repoName={settings.repoName}
       />
     </div>
   );

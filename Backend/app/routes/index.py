@@ -15,7 +15,7 @@ from app.db import get_db
 from app.models import IndexRequest
 from app.models_db import User
 from app.routes.auth import get_current_user
-from app.services.indexer import get_index_stats, get_indexed_files, index_repository
+from app.services.indexer import clear_index, get_index_stats, get_indexed_files, index_repository
 from app.utils.tree import build_file_tree
 
 logger = logging.getLogger(__name__)
@@ -87,6 +87,20 @@ def index_repo(
         "chunks_created": result["chunks_created"],
         "message": f"Indexed {result['files_indexed']} files ({result['chunks_created']} chunks)",
     }
+
+
+@router.delete("/index")
+def delete_index(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clear the user's indexed repository from ChromaDB and reset repo metadata."""
+    clear_index(user.id)
+    user.repo_path = None
+    user.github_repo_owner = None
+    user.github_repo_name = None
+    db.commit()
+    return {"status": "ok", "message": "Index cleared"}
 
 
 @router.get("/index/status")

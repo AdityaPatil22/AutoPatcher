@@ -164,6 +164,14 @@ def search_semantic(query: str, user_id: int, top_k: int = 10) -> list[dict]:
     return hits
 
 
+def clear_index(user_id: int) -> None:
+    """Delete all indexed chunks for a user from ChromaDB."""
+    collection = _get_collection(user_id)
+    existing_ids = collection.get()["ids"]
+    if existing_ids:
+        collection.delete(ids=existing_ids)
+
+
 def is_indexed(user_id: int) -> bool:
     """Check whether any code has been indexed in ChromaDB for this user."""
     try:

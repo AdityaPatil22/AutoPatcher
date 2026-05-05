@@ -18,3 +18,9 @@ export function indexRepository(repoPath?: string, githubUrl?: string) {
 export function getIndexFiles() {
   return request<IndexFiles>("/index/files");
 }
+
+export function clearIndex() {
+  return request<{ status: string; message: string }>("/index", {
+    method: "DELETE",
+  });
+}
