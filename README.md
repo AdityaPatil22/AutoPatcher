@@ -146,14 +146,65 @@ The backend is the "brain" (context, search, prompt construction, patch parsing)
    ollama pull llama3
    ```
 3. **Start Ollama with CORS enabled** (required for browser access):
+
+   By default, browsers block requests from a website (like your deployed app) to `localhost:11434`. Ollama needs to be told to allow these cross-origin requests.
+
+   **macOS:**
+
    ```bash
    OLLAMA_ORIGINS=* ollama serve
    ```
-   To make CORS permanent on macOS:
+
+   If Ollama is already running (e.g. the menu bar app), quit it first, then run the command above in a terminal.
+
+   To make it permanent so you don't have to type it every time:
+
    ```bash
    launchctl setenv OLLAMA_ORIGINS "*"
    ```
+
    Then restart the Ollama app normally.
+
+   **Linux:**
+
+   If running directly:
+   ```bash
+   OLLAMA_ORIGINS=* ollama serve
+   ```
+
+   If using systemd:
+   ```bash
+   sudo systemctl edit ollama
+   ```
+
+   Add this in the editor:
+   ```
+   [Service]
+   Environment="OLLAMA_ORIGINS=*"
+   ```
+
+   Then:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart ollama
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   $env:OLLAMA_ORIGINS="*"
+   ollama serve
+   ```
+
+   To make it permanent, add `OLLAMA_ORIGINS` as a system environment variable with value `*` via Settings > System > Environment Variables, then restart Ollama.
+
+   **Quick test** — after starting with CORS enabled, open your browser console and run:
+
+   ```javascript
+   fetch("http://localhost:11434").then(r => console.log("Ollama OK:", r.status))
+   ```
+
+   If you see `Ollama OK: 200`, your deployed app will be able to connect.
 
 4. **Select "Local (Ollama)"** in the LLM Provider toggle on the app
 5. Pick a model from the auto-detected dropdown and generate fixes as usual

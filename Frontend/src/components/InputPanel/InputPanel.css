@@ -256,6 +256,25 @@
   color: var(--text);
 }
 
+.ollama-setup-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.ollama-setup-link:hover {
+  text-decoration: underline;
+}
+
+.ollama-setup-link svg {
+  flex-shrink: 0;
+}
+
 .ollama-steps a {
   color: var(--primary);
   text-decoration: none;
