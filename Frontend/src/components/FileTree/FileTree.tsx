@@ -189,7 +189,6 @@ export default function FileTree({ refreshKey }: Props) {
           <span>{root ? root.split("/").filter(Boolean).pop() : "Indexed Files"}</span>
           <span className="tree-badge">{totalFiles}</span>
         </div>
-        {root && <span className="tree-root">{root}</span>}
       </button>
       {expanded && (
         <>

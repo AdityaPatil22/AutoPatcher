@@ -41,17 +41,6 @@
   border-radius: 10px;
 }
 
-.tree-root {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: right;
-}
-
 .file-tree-body {
   border-top: 1px solid var(--border);
   padding: 8px 0;
