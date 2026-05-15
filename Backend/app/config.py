@@ -10,7 +10,7 @@ load_dotenv()
 
 # --- LLM ---
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "browser")
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")
 DEFAULT_LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 LLM_MODEL: str = DEFAULT_LLM_MODEL
 
@@ -20,7 +20,7 @@ ALLOWED_ORIGINS: list[str] = (
     ["*"] if _origins_raw == "*"
     else [o.strip() for o in _origins_raw.split(",") if o.strip()]
 )
-RATE_LIMIT_GLOBAL: int = int(os.getenv("RATE_LIMIT_GLOBAL", "60"))
+RATE_LIMIT_GLOBAL: int = int(os.getenv("RATE_LIMIT_GLOBAL", "100"))
 RATE_LIMIT_LLM: int = int(os.getenv("RATE_LIMIT_LLM", "10"))
 
 # --- GitHub OAuth ---
