@@ -107,6 +107,7 @@
   background: var(--red-bg);
   border: 1px solid var(--red);
   border-radius: var(--radius);
+  margin-top: 16px;
   margin-bottom: 16px;
   font-size: 14px;
   color: var(--red);
