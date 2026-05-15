@@ -13,6 +13,7 @@ export function useSettings() {
   const [maxContextFiles, setMaxContextFilesState] = useState(3);
   const [repoName, setRepoName] = useState<string | null>(null);
   const [geminiRequestsRemaining, setGeminiRequestsRemaining] = useState(5);
+  const [geminiModel, setGeminiModel] = useState("");
   const [geminiDailyLimit, setGeminiDailyLimit] = useState(5);
 
   const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -23,6 +24,7 @@ export function useSettings() {
       setMaxContextFilesState(s.max_context_files);
       setLlmProvider(s.provider);
       setModelName(s.model);
+      setGeminiModel(s.gemini_model);
       setGeminiRequestsRemaining(s.gemini_requests_remaining);
       setGeminiDailyLimit(s.gemini_daily_limit);
       if (s.repo_path) {
@@ -38,8 +40,10 @@ export function useSettings() {
 
   async function handleProviderChange(provider: LLMProvider) {
     setLlmProvider(provider);
+    const restoredModel = provider === "gemini" ? geminiModel : "";
+    setModelName(restoredModel);
     try {
-      await setProvider(provider);
+      await Promise.all([setProvider(provider), setModel(restoredModel)]);
     } catch {
       await fetchSettings();
     }
@@ -72,6 +76,7 @@ export function useSettings() {
   return {
     llmProvider,
     modelName,
+    geminiModel,
     maxContextFiles,
     repoName,
     geminiRequestsRemaining,

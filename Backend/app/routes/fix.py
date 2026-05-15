@@ -191,7 +191,7 @@ def generate_prompt(ticket: TicketInput, _user: User = Depends(get_current_user)
 
     messages = build_prompt(ticket.model_dump(), contexts)
     session_id = _store_session(contexts, ticket.title)
-    model_hint = config.LLM_MODEL or "llama3"
+    model_hint = config.LLM_MODEL or "gemini-2.5-flash"
 
     return PromptOutput(
         session_id=session_id,
@@ -225,7 +225,7 @@ def refine_prompt(refine: RefineInput, _user: User = Depends(get_current_user)):
     )
 
     session_id = _store_session(contexts, refine.title)
-    model_hint = config.LLM_MODEL or "llama3"
+    model_hint = config.LLM_MODEL or "gemini-2.5-flash"
 
     return PromptOutput(
         session_id=session_id,

@@ -33,6 +33,7 @@ export default function InputPanel({
   const {
     llmProvider,
     modelName,
+    geminiModel,
     maxContextFiles,
     repoName,
     geminiRequestsRemaining,
@@ -164,6 +165,7 @@ export default function InputPanel({
           onModelChange={handleModelInput}
           geminiRemaining={geminiRequestsRemaining}
           geminiLimit={geminiDailyLimit}
+          geminiModel={geminiModel}
         />
 
         <div className="form-group">

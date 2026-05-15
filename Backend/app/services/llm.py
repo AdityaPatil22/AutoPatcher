@@ -29,7 +29,7 @@ def _call_gemini(messages: list[dict]) -> str:
     from google.genai import types
 
     client = genai.Client(api_key=config.GEMINI_API_KEY)
-    model = config.LLM_MODEL or "gemini-3-flash-preview"
+    model = config.LLM_MODEL or "gemini-2.5-flash"
 
     system_parts = []
     contents = []

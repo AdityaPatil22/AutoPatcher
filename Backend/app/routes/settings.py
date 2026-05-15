@@ -29,6 +29,7 @@ def get_settings(user: User | None = Depends(get_current_user_optional)):
     return {
         "provider": config.LLM_PROVIDER,
         "model": config.LLM_MODEL,
+        "gemini_model": config.DEFAULT_LLM_MODEL,
         "gemini_available": bool(config.GEMINI_API_KEY),
         "max_context_files": config.MAX_CONTEXT_FILES,
         "repo_path": user.repo_path if user else None,

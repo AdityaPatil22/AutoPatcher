@@ -11,7 +11,8 @@ load_dotenv()
 # --- LLM ---
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "browser")
-LLM_MODEL: str = os.getenv("LLM_MODEL", "")
+DEFAULT_LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+LLM_MODEL: str = DEFAULT_LLM_MODEL
 
 # --- Security / CORS ---
 _origins_raw = os.getenv("ALLOWED_ORIGINS", "*").strip()

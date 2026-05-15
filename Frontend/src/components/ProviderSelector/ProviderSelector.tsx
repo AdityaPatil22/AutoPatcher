@@ -9,6 +9,7 @@ interface ProviderSelectorProps {
   onModelChange: (model: string) => void;
   geminiRemaining: number;
   geminiLimit: number;
+  geminiModel: string;
 }
 
 export default function ProviderSelector({
@@ -18,6 +19,7 @@ export default function ProviderSelector({
   onModelChange,
   geminiRemaining,
   geminiLimit,
+  geminiModel,
 }: ProviderSelectorProps) {
   return (
     <>
@@ -54,7 +56,7 @@ export default function ProviderSelector({
           </div>
           <div className="form-group">
             <label>Model</label>
-            <div className="gemini-model-badge">gemini-2.5-flash</div>
+            <div className="gemini-model-badge">{geminiModel || "gemini"}</div>
           </div>
         </>
       )}

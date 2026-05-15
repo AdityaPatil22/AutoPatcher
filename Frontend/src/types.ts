@@ -39,6 +39,7 @@ export type LLMProvider = "gemini" | "browser";
 export interface Settings {
   provider: LLMProvider;
   model: string;
+  gemini_model: string;
   gemini_available: boolean;
   max_context_files: number;
   repo_path: string | null;
