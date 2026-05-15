@@ -5,13 +5,10 @@ export function getIndexStatus() {
   return request<IndexStatus>("/index/status");
 }
 
-export function indexRepository(repoPath?: string, githubUrl?: string) {
-  const body: Record<string, string> = {};
-  if (repoPath) body.repo_path = repoPath;
-  if (githubUrl) body.github_url = githubUrl;
+export function indexRepository(githubUrl: string) {
   return request<IndexResult>("/index", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ github_url: githubUrl }),
   });
 }
 

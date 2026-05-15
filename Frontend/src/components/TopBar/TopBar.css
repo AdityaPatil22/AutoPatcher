@@ -3,8 +3,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -26,28 +28,31 @@
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .index-status {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-muted);
-  background: none;
-  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 6px 12px;
+  padding: 12px;
   cursor: pointer;
   font-family: var(--font-sans);
   font-weight: 500;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .index-status:hover {
   background: var(--surface-hover);
   border-color: var(--border-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .index-status.ready {
@@ -64,10 +69,13 @@
 
 .index-status.ready .status-dot {
   background: var(--green);
+  box-shadow: 0 0 6px rgba(46, 160, 67, 0.4);
 }
+
 .index-status.empty .status-dot {
   background: var(--yellow);
 }
+
 .index-status.error .status-dot {
   background: var(--red);
 }
@@ -87,20 +95,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  background: transparent;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .theme-toggle:hover {
   color: var(--text);
   border-color: var(--border-light);
   background: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-github {
@@ -110,12 +121,13 @@
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
-  background: var(--bg);
+  background: var(--glass);
+  backdrop-filter: blur(8px);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   font-family: var(--font-sans);
   white-space: nowrap;
 }
@@ -123,6 +135,8 @@
 .btn-github:hover:not(:disabled) {
   background: var(--surface-hover);
   border-color: var(--border-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-github:disabled {
@@ -138,21 +152,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 4px 4px;
-  background: transparent;
-  border: 1px solid var(--border);
+  padding: 8px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   cursor: pointer;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .user-avatar-btn:hover {
   background: var(--surface-hover);
   border-color: var(--border-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .user-avatar {
@@ -172,13 +189,27 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 140px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  min-width: 132px;
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 200;
   padding: 4px;
+  animation: dropdown-in 0.15s ease-out;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdown-item {
@@ -193,9 +224,17 @@
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s;
+  transition: background var(--transition-fast);
 }
 
 .dropdown-item:hover {
   background: var(--surface-hover);
+}
+
+@media (max-width: 500px) {
+  .top-bar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }

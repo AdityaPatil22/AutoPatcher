@@ -1,28 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { getIndexFiles } from "../../api/indexing";
 import type { FileNode } from "../../types";
+import { EXT_COLORS } from "../../constants/fileExtensions";
 import "./FileTree.css";
-
-const EXT_COLORS: Record<string, string> = {
-  py: "#3572A5",
-  js: "#f1e05a",
-  ts: "#3178c6",
-  jsx: "#f1e05a",
-  tsx: "#3178c6",
-  vue: "#41b883",
-  java: "#b07219",
-  go: "#00ADD8",
-  rb: "#CC342D",
-  rs: "#dea584",
-  cpp: "#f34b7d",
-  c: "#555555",
-  html: "#e34c26",
-  css: "#563d7c",
-  json: "#8b949e",
-  svelte: "#ff3e00",
-  kt: "#A97BFF",
-  swift: "#F05138",
-};
 
 function ExtDot({ name }: { name: string }) {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";

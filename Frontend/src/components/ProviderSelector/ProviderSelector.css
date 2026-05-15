@@ -1,0 +1,72 @@
+.search-mode-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.mode-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.mode-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.mode-btn.active {
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.gemini-model-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--primary-bg);
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  border-radius: var(--radius);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: -0.2px;
+}
+
+.gemini-quota {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--green-bg);
+  border: 1px solid rgba(46, 160, 67, 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green);
+}
+
+.gemini-quota-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gemini-quota-exhausted {
+  background: var(--yellow-bg);
+  border-color: rgba(187, 128, 9, 0.25);
+  color: var(--yellow);
+}

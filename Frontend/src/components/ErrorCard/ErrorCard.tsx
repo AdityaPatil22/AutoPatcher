@@ -6,7 +6,51 @@ interface ErrorCardProps {
   onDismiss: () => void;
 }
 
+function parseErrorMessage(raw: string): { title: string; detail: string } {
+  const statusMatch = raw.match(/^(\d{3})\s+\w+/);
+  const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : null;
+
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0].replace(/'/g, '"'));
+      const msg =
+        parsed?.error?.message ||
+        parsed?.message ||
+        parsed?.detail ||
+        null;
+      if (msg) {
+        const title = statusCode
+          ? `Error ${statusCode}`
+          : "Something went wrong";
+        return { title, detail: msg };
+      }
+    } catch {
+      // not valid JSON, fall through
+    }
+  }
+
+  if (raw.includes("429") || raw.toLowerCase().includes("limit")) {
+    return { title: "Rate limit reached", detail: raw };
+  }
+
+  if (raw.includes("503") || raw.toLowerCase().includes("unavailable")) {
+    return {
+      title: "Service temporarily unavailable",
+      detail: "The model is experiencing high demand. Please try again in a moment.",
+    };
+  }
+
+  if (raw.includes("500")) {
+    return { title: "Server error", detail: "An internal error occurred. Please try again." };
+  }
+
+  return { title: "Something went wrong", detail: raw };
+}
+
 export default function ErrorCard({ message, onRetry, onDismiss }: ErrorCardProps) {
+  const { title, detail } = parseErrorMessage(message);
+
   return (
     <div className="error-card">
       <div className="error-icon">
@@ -17,8 +61,8 @@ export default function ErrorCard({ message, onRetry, onDismiss }: ErrorCardProp
         </svg>
       </div>
       <div className="error-content">
-        <div className="error-title">Something went wrong</div>
-        <div className="error-detail">{message}</div>
+        <div className="error-title">{title}</div>
+        <div className="error-detail">{detail}</div>
       </div>
       <div className="error-actions">
         <button className="btn btn-sm" onClick={onRetry} type="button">

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { UseSettingsReturn } from "../../hooks/useSettings";
 import type { UsePatchGenerationReturn } from "../../hooks/usePatchGeneration";
-import { isOllamaRunning, listOllamaModels } from "../../api/localLLM";
+import ProviderSelector from "../ProviderSelector/ProviderSelector";
 import "./InputPanel.css";
 
 interface InputPanelProps {
@@ -42,43 +42,10 @@ export default function InputPanel({
     handleMaxContextFilesChange,
   } = settings;
 
-  const {
-    ticket,
-    setTicket,
-    fileHint,
-    setFileHint,
-    loading,
-    handleGenerateFix,
-  } = patchGen;
+  const { ticket, setTicket, fileHint, setFileHint, loading, handleGenerateFix } = patchGen;
 
-  const [ollamaStatus, setOllamaStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (llmProvider !== "browser") return;
-
-    let cancelled = false;
-
-    async function check() {
-      setOllamaStatus("checking");
-      const running = await isOllamaRunning();
-      if (cancelled) return;
-      setOllamaStatus(running ? "online" : "offline");
-
-      if (running) {
-        const models = await listOllamaModels();
-        if (!cancelled) setOllamaModels(models);
-      } else {
-        setOllamaModels([]);
-      }
-    }
-
-    check();
-    const interval = setInterval(check, 10_000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [llmProvider]);
 
   function validateField(field: "title" | "description", value: string): string | undefined {
     if (field === "title") {
@@ -108,14 +75,11 @@ export default function InputPanel({
 
   function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
-
     const titleErr = validateField("title", ticket.title);
     const descErr = validateField("description", ticket.description);
     setFieldErrors({ title: titleErr, description: descErr });
     setTouched({ title: true, description: true });
-
     if (titleErr || descErr) return;
-
     handleGenerateFix();
   }
 
@@ -150,6 +114,7 @@ export default function InputPanel({
             </div>
           )}
         </div>
+
         <div className={`form-group ${fieldErrors.description ? "form-group-error" : ""}`}>
           <div className="label-row">
             <label htmlFor="description">Description</label>
@@ -175,6 +140,7 @@ export default function InputPanel({
             </div>
           )}
         </div>
+
         <div className="form-group">
           <label htmlFor="fileHint">
             File Hint <span className="optional">(optional)</span>
@@ -191,102 +157,14 @@ export default function InputPanel({
           <span>Settings</span>
         </div>
 
-        <div className="form-group">
-          <label>LLM Provider</label>
-          <div className="search-mode-toggle">
-            <button
-              type="button"
-              className={`mode-btn ${llmProvider === "browser" ? "active" : ""}`}
-              onClick={() => handleProviderChange("browser")}
-              title="Run LLM on your machine via Ollama"
-            >
-              Local (Ollama)
-            </button>
-            <button
-              type="button"
-              className={`mode-btn ${llmProvider === "gemini" ? "active" : ""}`}
-              onClick={() => handleProviderChange("gemini")}
-            >
-              Gemini
-            </button>
-          </div>
-        </div>
-
-        {llmProvider === "browser" && (
-          <>
-            <div className={`ollama-status ollama-${ollamaStatus}`}>
-              <div className="ollama-status-row">
-                <span className="ollama-dot" />
-                <span className="ollama-label">
-                  {ollamaStatus === "checking" && "Checking Ollama..."}
-                  {ollamaStatus === "online" && "Ollama connected"}
-                  {ollamaStatus === "offline" && "Ollama not detected"}
-                </span>
-                {ollamaStatus === "online" && (
-                  <span className="ollama-badge">{ollamaModels.length} model{ollamaModels.length !== 1 ? "s" : ""}</span>
-                )}
-              </div>
-              {ollamaStatus === "offline" && (
-                <div className="ollama-help">
-                  <p>To use this feature, install and run Ollama locally on your system.</p>
-                  <ol className="ollama-steps">
-                    <li>Install from <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">ollama.com</a></li>
-                    <li>Pull a model: <code>ollama pull llama3</code></li>
-                    <li>Enable browser access: <code>OLLAMA_ORIGINS=* ollama serve</code></li>
-                  </ol>
-                  <a
-                    className="ollama-setup-link"
-                    href="https://github.com/AdityaPatil22/AutoPatch-AI#setup"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View full setup guide
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  </a>
-                </div>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="browserModel">Model</label>
-              {ollamaModels.length > 0 ? (
-                <div className="model-select-wrapper">
-                  <select
-                    id="browserModel"
-                    className="model-select"
-                    value={modelName}
-                    onChange={(e) => handleModelInput(e.target.value)}
-                  >
-                    {!modelName && <option value="">Select a model...</option>}
-                    {ollamaModels.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <input
-                  id="browserModel"
-                  value={modelName}
-                  onChange={(e) => handleModelInput(e.target.value)}
-                  placeholder="e.g. llama3, deepseek-coder:6.7b"
-                />
-              )}
-            </div>
-          </>
-        )}
-
-        {llmProvider === "gemini" && (
-          <>
-            <div className="form-group">
-              <label>Model</label>
-              <div className="gemini-model-badge">gemini-2.5-flash</div>
-            </div>
-            <div className={`gemini-quota ${geminiRequestsRemaining === 0 ? "gemini-quota-exhausted" : ""}`}>
-              <span className="gemini-quota-count">{geminiRequestsRemaining}/{geminiDailyLimit}</span>
-              <span> requests remaining today</span>
-            </div>
-          </>
-        )}
+        <ProviderSelector
+          provider={llmProvider}
+          onChange={handleProviderChange}
+          modelName={modelName}
+          onModelChange={handleModelInput}
+          geminiRemaining={geminiRequestsRemaining}
+          geminiLimit={geminiDailyLimit}
+        />
 
         <div className="form-group">
           <label htmlFor="maxFiles">
@@ -297,9 +175,7 @@ export default function InputPanel({
             <button
               type="button"
               className="stepper-btn"
-              onClick={() =>
-                handleMaxContextFilesChange(maxContextFiles - 1)
-              }
+              onClick={() => handleMaxContextFilesChange(maxContextFiles - 1)}
               disabled={maxContextFiles <= 1}
             >
               -
@@ -319,15 +195,14 @@ export default function InputPanel({
             <button
               type="button"
               className="stepper-btn"
-              onClick={() =>
-                handleMaxContextFilesChange(maxContextFiles + 1)
-              }
+              onClick={() => handleMaxContextFilesChange(maxContextFiles + 1)}
               disabled={maxContextFiles >= 20}
             >
               +
             </button>
           </div>
         </div>
+
         {!isLoggedIn && (
           <div className="form-prereq">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>

@@ -1,18 +1,7 @@
 import { useState } from "react";
 import type { FilePatch } from "../../types";
+import { EXT_COLORS, EXT_LABELS } from "../../constants/fileExtensions";
 import "./PatchCard.css";
-
-const EXT_COLORS: Record<string, string> = {
-  py: "#3572A5", js: "#f1e05a", ts: "#3178c6", jsx: "#f1e05a", tsx: "#3178c6",
-  vue: "#41b883", java: "#b07219", go: "#00ADD8", rb: "#CC342D", rs: "#dea584",
-  cpp: "#f34b7d", c: "#555555", html: "#e34c26", css: "#563d7c", svelte: "#ff3e00",
-};
-
-const EXT_LABELS: Record<string, string> = {
-  py: "Python", js: "JavaScript", ts: "TypeScript", jsx: "React JSX", tsx: "React TSX",
-  vue: "Vue", java: "Java", go: "Go", rb: "Ruby", rs: "Rust",
-  cpp: "C++", c: "C", html: "HTML", css: "CSS", svelte: "Svelte",
-};
 
 type Tab = "diff" | "fixed" | "original";
 
