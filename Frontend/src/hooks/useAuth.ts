@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { getMe, logout as apiLogout } from "../api/auth";
 import type { User } from "../types";
 
@@ -17,10 +17,6 @@ export function useAuth() {
     }
   }, []);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
   function login() {
     window.location.href = "/api/auth/github";
   }
@@ -38,6 +34,7 @@ export function useAuth() {
     user,
     isLoggedIn: !!user,
     loading,
+    checkAuth,
     login,
     logout,
   } as const;

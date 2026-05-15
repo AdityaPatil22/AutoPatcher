@@ -18,15 +18,18 @@ export default function App() {
   const patchGen = usePatchGeneration({
     llmProvider: settings.llmProvider,
     modelName: settings.modelName,
+    onGeminiRequest: settings.fetchSettings,
   });
 
   const [showIndexModal, setShowIndexModal] = useState(false);
   const [treeRefreshKey, setTreeRefreshKey] = useState(0);
 
   useEffect(() => {
+    auth.checkAuth();
     fetchIndex();
     settings.fetchSettings();
-  }, [fetchIndex, settings.fetchSettings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="app">

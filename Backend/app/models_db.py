@@ -1,9 +1,9 @@
 """SQLAlchemy database models."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from cryptography.fernet import Fernet
-from sqlalchemy import BigInteger, DateTime, String, Text
+from sqlalchemy import BigInteger, Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 import app.config as config
@@ -31,6 +31,8 @@ class User(Base):
     repo_path: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     github_repo_owner: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     github_repo_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    gemini_requests_today: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    gemini_requests_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

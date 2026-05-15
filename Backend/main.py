@@ -36,6 +36,14 @@ async def lifespan(_app: FastAPI):
             with engine.begin() as conn:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} VARCHAR(255)"))
             logger.info("Migrated: added %s column to users table", col)
+    if "gemini_requests_today" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN gemini_requests_today INTEGER DEFAULT 0 NOT NULL"))
+        logger.info("Migrated: added gemini_requests_today column to users table")
+    if "gemini_requests_date" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN gemini_requests_date DATE"))
+        logger.info("Migrated: added gemini_requests_date column to users table")
     yield
 
 

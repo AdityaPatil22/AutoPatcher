@@ -12,9 +12,10 @@ import type { LLMProvider, PatchOutput, TicketInput } from "../types";
 interface PatchGenOptions {
   llmProvider: LLMProvider;
   modelName: string;
+  onGeminiRequest?: () => void;
 }
 
-export function usePatchGeneration({ llmProvider, modelName }: PatchGenOptions) {
+export function usePatchGeneration({ llmProvider, modelName, onGeminiRequest }: PatchGenOptions) {
   const [ticket, setTicket] = useState<TicketInput>({
     title: "",
     description: "",
@@ -63,6 +64,7 @@ export function usePatchGeneration({ llmProvider, modelName }: PatchGenOptions) 
         data = await _browserLocalGenerate(payload);
       } else {
         data = await generateFix(payload);
+        onGeminiRequest?.();
       }
 
       setResult(data);
@@ -125,6 +127,7 @@ export function usePatchGeneration({ llmProvider, modelName }: PatchGenOptions) 
         data = await _browserLocalRefine(refineInput);
       } else {
         data = await refineFix(refineInput);
+        onGeminiRequest?.();
       }
 
       setResult(data);

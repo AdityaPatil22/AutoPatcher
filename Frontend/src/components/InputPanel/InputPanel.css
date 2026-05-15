@@ -4,6 +4,75 @@
   max-height: calc(100vh - 57px);
 }
 
+/* Label row with character count */
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.label-row label {
+  margin-bottom: 6px;
+}
+
+.char-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.15s;
+}
+
+.char-count-warn {
+  color: var(--yellow);
+}
+
+.char-count-over {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* Error states */
+.input-error,
+.form-group-error input,
+.form-group-error textarea {
+  border-color: var(--red) !important;
+}
+
+.input-error:focus,
+.form-group-error input:focus,
+.form-group-error textarea:focus {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px var(--red-bg) !important;
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--red);
+  animation: field-error-in 0.2s ease-out;
+}
+
+.field-error svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+@keyframes field-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .settings-divider {
   display: flex;
   align-items: center;
@@ -311,4 +380,44 @@
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.2px;
+}
+
+/* Gemini static model badge */
+.gemini-model-badge {
+  display: inline-block;
+  padding: 7px 14px;
+  background: var(--primary-bg);
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  border-radius: var(--radius);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: -0.2px;
+}
+
+/* Gemini daily quota */
+.gemini-quota {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--green-bg);
+  border: 1px solid rgba(46, 160, 67, 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green);
+}
+
+.gemini-quota-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gemini-quota-exhausted {
+  background: var(--yellow-bg);
+  border-color: rgba(187, 128, 9, 0.25);
+  color: var(--yellow);
 }

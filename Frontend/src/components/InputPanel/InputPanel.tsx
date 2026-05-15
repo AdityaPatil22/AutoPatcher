@@ -13,6 +13,15 @@ interface InputPanelProps {
   onOpenIndexModal: () => void;
 }
 
+interface FieldErrors {
+  title?: string;
+  description?: string;
+}
+
+const TITLE_MAX = 200;
+const DESC_MIN = 20;
+const DESC_MAX = 5000;
+
 export default function InputPanel({
   settings,
   patchGen,
@@ -26,6 +35,8 @@ export default function InputPanel({
     modelName,
     maxContextFiles,
     repoName,
+    geminiRequestsRemaining,
+    geminiDailyLimit,
     handleProviderChange,
     handleModelInput,
     handleMaxContextFilesChange,
@@ -42,6 +53,8 @@ export default function InputPanel({
 
   const [ollamaStatus, setOllamaStatus] = useState<"checking" | "online" | "offline">("checking");
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (llmProvider !== "browser") return;
@@ -67,36 +80,100 @@ export default function InputPanel({
     return () => { cancelled = true; clearInterval(interval); };
   }, [llmProvider]);
 
+  function validateField(field: "title" | "description", value: string): string | undefined {
+    if (field === "title") {
+      if (!value.trim()) return "Title is required";
+      if (value.length > TITLE_MAX) return `Title must be under ${TITLE_MAX} characters`;
+    }
+    if (field === "description") {
+      if (!value.trim()) return "Description is required";
+      if (value.trim().length < DESC_MIN) return `Description needs at least ${DESC_MIN} characters`;
+      if (value.length > DESC_MAX) return `Description must be under ${DESC_MAX} characters`;
+    }
+    return undefined;
+  }
+
+  function handleFieldChange(field: "title" | "description", value: string) {
+    setTicket((t) => ({ ...t, [field]: value }));
+    if (touched[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+    }
+  }
+
+  function handleBlur(field: "title" | "description") {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    const value = field === "title" ? ticket.title : ticket.description;
+    setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  }
+
+  function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+
+    const titleErr = validateField("title", ticket.title);
+    const descErr = validateField("description", ticket.description);
+    setFieldErrors({ title: titleErr, description: descErr });
+    setTouched({ title: true, description: true });
+
+    if (titleErr || descErr) return;
+
+    handleGenerateFix();
+  }
+
   const canGenerate = isLoggedIn && isIndexed && !loading;
+  const hasErrors = !!(fieldErrors.title || fieldErrors.description);
 
   return (
     <section className="panel input-panel">
       <h2>Bug Details</h2>
-      <form onSubmit={handleGenerateFix}>
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className={`form-group ${fieldErrors.title ? "form-group-error" : ""}`}>
+          <div className="label-row">
+            <label htmlFor="title">Title</label>
+            <span className={`char-count ${ticket.title.length > TITLE_MAX ? "char-count-over" : ""}`}>
+              {ticket.title.length}/{TITLE_MAX}
+            </span>
+          </div>
           <input
             id="title"
             value={ticket.title}
-            onChange={(e) =>
-              setTicket((t) => ({ ...t, title: e.target.value }))
-            }
+            onChange={(e) => handleFieldChange("title", e.target.value)}
+            onBlur={() => handleBlur("title")}
             placeholder="e.g. Fix export button issue"
-            required
+            className={fieldErrors.title ? "input-error" : ""}
+            aria-invalid={!!fieldErrors.title}
+            aria-describedby={fieldErrors.title ? "title-error" : undefined}
           />
+          {fieldErrors.title && (
+            <div className="field-error" id="title-error" role="alert">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {fieldErrors.title}
+            </div>
+          )}
         </div>
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
+        <div className={`form-group ${fieldErrors.description ? "form-group-error" : ""}`}>
+          <div className="label-row">
+            <label htmlFor="description">Description</label>
+            <span className={`char-count ${ticket.description.length > DESC_MAX ? "char-count-over" : ticket.description.trim().length > 0 && ticket.description.trim().length < DESC_MIN ? "char-count-warn" : ""}`}>
+              {ticket.description.length}/{DESC_MAX}
+            </span>
+          </div>
           <textarea
             id="description"
             value={ticket.description}
-            onChange={(e) =>
-              setTicket((t) => ({ ...t, description: e.target.value }))
-            }
+            onChange={(e) => handleFieldChange("description", e.target.value)}
+            onBlur={() => handleBlur("description")}
             rows={6}
-            placeholder="Describe the bug in detail..."
-            required
+            placeholder="Describe the bug in detail — what happens, what should happen, and any relevant context..."
+            className={fieldErrors.description ? "input-error" : ""}
+            aria-invalid={!!fieldErrors.description}
+            aria-describedby={fieldErrors.description ? "desc-error" : undefined}
           />
+          {fieldErrors.description && (
+            <div className="field-error" id="desc-error" role="alert">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {fieldErrors.description}
+            </div>
+          )}
         </div>
         <div className="form-group">
           <label htmlFor="fileHint">
@@ -199,17 +276,16 @@ export default function InputPanel({
         )}
 
         {llmProvider === "gemini" && (
-          <div className="form-group">
-            <label htmlFor="geminiModel">
-              Model Name <span className="optional">(optional)</span>
-            </label>
-            <input
-              id="geminiModel"
-              value={modelName}
-              onChange={(e) => handleModelInput(e.target.value)}
-              placeholder="default: gemini-2.5-flash"
-            />
-          </div>
+          <>
+            <div className="form-group">
+              <label>Model</label>
+              <div className="gemini-model-badge">gemini-2.5-flash</div>
+            </div>
+            <div className={`gemini-quota ${geminiRequestsRemaining === 0 ? "gemini-quota-exhausted" : ""}`}>
+              <span className="gemini-quota-count">{geminiRequestsRemaining}/{geminiDailyLimit}</span>
+              <span> requests remaining today</span>
+            </div>
+          </>
         )}
 
         <div className="form-group">
@@ -280,7 +356,7 @@ export default function InputPanel({
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={!canGenerate}
+          disabled={!canGenerate || hasErrors}
         >
           {loading && <span className="spinner-inline" />}
           {loading ? "Generating..." : "Generate Fix"}

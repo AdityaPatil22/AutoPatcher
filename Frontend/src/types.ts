@@ -43,6 +43,8 @@ export interface Settings {
   max_context_files: number;
   repo_path: string | null;
   ollama_url: string;
+  gemini_requests_remaining: number;
+  gemini_daily_limit: number;
 }
 
 export interface PromptOutput {
