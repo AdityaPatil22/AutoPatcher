@@ -10,6 +10,7 @@ interface ProviderSelectorProps {
   geminiRemaining: number;
   geminiLimit: number;
   geminiModel: string;
+  isLoggedIn: boolean;
 }
 
 export default function ProviderSelector({
@@ -20,6 +21,7 @@ export default function ProviderSelector({
   geminiRemaining,
   geminiLimit,
   geminiModel,
+  isLoggedIn,
 }: ProviderSelectorProps) {
   return (
     <>
@@ -50,10 +52,12 @@ export default function ProviderSelector({
 
       {provider === "gemini" && (
         <>
-          <div className={`gemini-quota ${geminiRemaining === 0 ? "gemini-quota-exhausted" : ""}`}>
-            <span className="gemini-quota-count">{geminiRemaining}/{geminiLimit}</span>
-            <span> requests remaining today</span>
-          </div>
+          {isLoggedIn && (
+            <div className={`gemini-quota ${geminiRemaining === 0 ? "gemini-quota-exhausted" : ""}`}>
+              <span className="gemini-quota-count">{geminiRemaining}/{geminiLimit}</span>
+              <span> requests remaining today</span>
+            </div>
+          )}
           <div className="form-group">
             <label>Model</label>
             <div className="gemini-model-badge">{geminiModel || "gemini"}</div>

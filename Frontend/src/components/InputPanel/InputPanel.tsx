@@ -166,6 +166,7 @@ export default function InputPanel({
           geminiRemaining={geminiRequestsRemaining}
           geminiLimit={geminiDailyLimit}
           geminiModel={geminiModel}
+          isLoggedIn={isLoggedIn}
         />
 
         <div className="form-group">
