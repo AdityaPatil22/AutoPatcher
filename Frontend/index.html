@@ -5,11 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>AutoPatch AI</title>
     <script>
       (function () {
         var t = localStorage.getItem("theme");
-        if (t !== "light" && t !== "dark") t = "dark";
+        if (t !== "light" && t !== "dark") t = "light";
         document.documentElement.dataset.theme = t;
         document.querySelector('meta[name="color-scheme"]').content = t;
       })();

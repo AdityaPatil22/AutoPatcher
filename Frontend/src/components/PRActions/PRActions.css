@@ -16,8 +16,6 @@
 
 .btn-create-pr:hover:not(:disabled) {
   filter: brightness(1.1);
-  box-shadow: 0 0 12px rgba(46, 160, 67, 0.25);
-  transform: translateY(-1px);
 }
 
 .btn-create-pr:disabled {
@@ -38,7 +36,6 @@
   margin-bottom: 16px;
   font-size: 14px;
   color: var(--green);
-  box-shadow: 0 0 20px rgba(46, 160, 67, 0.1);
   animation: pr-slide-down 0.2s ease-out;
 }
 
@@ -77,7 +74,7 @@
 .pr-success-banner code {
   font-family: var(--font-mono);
   font-size: 11px;
-  background: rgba(46, 160, 67, 0.12);
+  background: rgba(91, 185, 140, 0.12);
   padding: 2px 6px;
   border-radius: 4px;
 }

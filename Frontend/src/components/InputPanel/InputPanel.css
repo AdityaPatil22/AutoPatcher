@@ -86,7 +86,7 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--gradient-border);
+  background: var(--border);
 }
 
 .stepper {
@@ -152,11 +152,11 @@
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 12px;
-  background: var(--primary-bg);
-  border: 1px solid rgba(56, 139, 253, 0.2);
+  background: var(--accent-bg);
+  border: 1px solid rgba(46, 94, 168, 0.2);
   border-radius: var(--radius);
   font-size: 13px;
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .form-prereq svg {
@@ -166,7 +166,7 @@
 .inline-link {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--accent);
   font-weight: 600;
   font-size: 13px;
   font-family: var(--font-sans);
@@ -177,7 +177,7 @@
 }
 
 .inline-link:hover {
-  color: var(--primary-hover);
+  color: var(--accent-hover);
 }
 
 .form-repo-badge {
@@ -187,7 +187,7 @@
   padding: 8px 12px;
   margin-bottom: 12px;
   background: var(--green-bg);
-  border: 1px solid rgba(46, 160, 67, 0.2);
+  border: 1px solid rgba(91, 185, 140, 0.2);
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 500;

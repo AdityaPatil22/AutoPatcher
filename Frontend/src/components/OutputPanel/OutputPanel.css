@@ -16,18 +16,18 @@
 .onboarding {
   max-width: 420px;
   width: 100%;
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 28px;
   box-shadow: var(--shadow-md);
 }
 
 .onboarding__title {
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
   margin-bottom: 6px;
   text-align: center;
@@ -83,10 +83,9 @@
 }
 
 .onboarding__step.active .onboarding__step-num {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-bg);
-  box-shadow: 0 0 12px rgba(56, 139, 253, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .onboarding__step.done .onboarding__step-num {
@@ -164,9 +163,8 @@
   font-weight: 600;
   font-family: var(--font-sans);
   color: var(--text-muted);
-  background: var(--glass);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -174,23 +172,20 @@
 }
 
 .btn-refine:hover {
-  color: var(--primary);
-  background: var(--primary-bg);
-  border-color: var(--primary);
-  transform: translateY(-1px);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
 }
 
 .btn-refine.open {
-  background: var(--primary);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--primary);
+  border-color: var(--accent);
 }
 
 .explanation-card {
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 20px;
@@ -224,9 +219,8 @@
 }
 
 .raw-json {
-  background: var(--glass);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 20px;
   max-height: 400px;

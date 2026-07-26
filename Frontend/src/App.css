@@ -1,19 +1,16 @@
 .layout {
   display: grid;
   grid-template-columns: 420px 1fr;
-  gap: 1px;
+  gap: 16px;
   min-height: calc(100vh - 57px);
   padding: 16px;
-  gap: 16px;
 }
 
 .panel {
   padding: 24px;
   overflow-y: auto;
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
 }
