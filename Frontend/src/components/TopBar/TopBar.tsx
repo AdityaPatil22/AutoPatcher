@@ -38,7 +38,7 @@ export default function TopBar({
           <path d="M2 17l10 5 10-5" />
           <path d="M2 12l10 5 10-5" />
         </svg>
-        <span>AutoPatch AI</span>
+        <span>AutoPatcher</span>
       </div>
       <div className="top-actions">
         <button

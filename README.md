@@ -1,10 +1,10 @@
-# AutoPatch AI
+# AutoPatcher
 
 AI-powered bug fix generator. Paste a bug ticket, get a code patch — and optionally push it as a GitHub Pull Request.
 
 ## System Design
 
-![AutoPatch AI System Architecture](./system-design.png)
+![AutoPatcher System Architecture](./system-design.png)
 
 ## How It Works
 
@@ -128,7 +128,7 @@ The project is configured for Railway with a single-container deployment:
 
 ## Local LLM (Ollama) Setup
 
-AutoPatch AI supports a **hybrid architecture** where the deployed backend handles context retrieval and prompt building, while the LLM runs entirely on your local machine via [Ollama](https://ollama.com). Your code and prompts never leave your machine.
+AutoPatcher supports a **hybrid architecture** where the deployed backend handles context retrieval and prompt building, while the LLM runs entirely on your local machine via [Ollama](https://ollama.com). Your code and prompts never leave your machine.
 
 ### How it works
 

@@ -77,7 +77,7 @@ export default function OutputPanel({
           <div className="onboarding">
             <h3 className="onboarding__title">How it works</h3>
             <p className="onboarding__subtitle">
-              AutoPatch AI generates code fixes from bug descriptions and opens PRs for you.
+              AutoPatcher generates code fixes from bug descriptions and opens PRs for you.
             </p>
             <div className="onboarding__steps">
               <div className={`onboarding__step ${stepsDone.login ? "done" : "active"}`}>

@@ -48,7 +48,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="AutoPatch AI",
+    title="AutoPatcher",
     description="AI-powered code patch generation from bug tickets",
     version="0.1.0",
     lifespan=lifespan,
