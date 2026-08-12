@@ -36,14 +36,23 @@ async def lifespan(_app: FastAPI):
             with engine.begin() as conn:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} VARCHAR(255)"))
             logger.info("Migrated: added %s column to users table", col)
-    if "gemini_requests_today" not in cols:
+    if "llm_requests_today" not in cols and "gemini_requests_today" not in cols:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE users ADD COLUMN gemini_requests_today INTEGER DEFAULT 0 NOT NULL"))
-        logger.info("Migrated: added gemini_requests_today column to users table")
-    if "gemini_requests_date" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN llm_requests_today INTEGER DEFAULT 0 NOT NULL"))
+        logger.info("Migrated: added llm_requests_today column to users table")
+    elif "gemini_requests_today" in cols and "llm_requests_today" not in cols:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE users ADD COLUMN gemini_requests_date DATE"))
-        logger.info("Migrated: added gemini_requests_date column to users table")
+            conn.execute(text("ALTER TABLE users RENAME COLUMN gemini_requests_today TO llm_requests_today"))
+        logger.info("Migrated: renamed gemini_requests_today -> llm_requests_today")
+
+    if "llm_requests_date" not in cols and "gemini_requests_date" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN llm_requests_date DATE"))
+        logger.info("Migrated: added llm_requests_date column to users table")
+    elif "gemini_requests_date" in cols and "llm_requests_date" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users RENAME COLUMN gemini_requests_date TO llm_requests_date"))
+        logger.info("Migrated: renamed gemini_requests_date -> llm_requests_date")
     yield
 
 

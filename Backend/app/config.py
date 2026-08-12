@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- LLM ---
-GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+API_KEY: str = os.getenv("API_KEY", "")
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")
-DEFAULT_LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
-LLM_MODEL: str = DEFAULT_LLM_MODEL
+LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+LLM_DAILY_LIMIT: int = int(os.getenv("LLM_DAILY_LIMIT", "5"))
 
 # --- Security / CORS ---
 _origins_raw = os.getenv("ALLOWED_ORIGINS", "*").strip()
@@ -27,7 +27,8 @@ RATE_LIMIT_LLM: int = int(os.getenv("RATE_LIMIT_LLM", "10"))
 GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
 GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
 SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE-ME-generate-a-fernet-key")
-FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://autopatch-ai-production.up.railway.app/")
+BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:8000")
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # --- Database ---
 DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://localhost/autopatch")

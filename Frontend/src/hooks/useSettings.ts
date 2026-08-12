@@ -8,13 +8,13 @@ import {
 import type { LLMProvider } from "../types";
 
 export function useSettings() {
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("browser");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("local-ollama");
   const [modelName, setModelName] = useState("");
   const [maxContextFiles, setMaxContextFilesState] = useState(3);
   const [repoName, setRepoName] = useState<string | null>(null);
-  const [geminiRequestsRemaining, setGeminiRequestsRemaining] = useState(5);
-  const [geminiModel, setGeminiModel] = useState("");
-  const [geminiDailyLimit, setGeminiDailyLimit] = useState(5);
+  const [llmRequestsRemaining, setLlmRequestsRemaining] = useState(5);
+  const [llmDailyLimit, setLlmDailyLimit] = useState(5);
+  const [backendUrl, setBackendUrl] = useState("");
 
   const modelDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -24,9 +24,9 @@ export function useSettings() {
       setMaxContextFilesState(s.max_context_files);
       setLlmProvider(s.provider);
       setModelName(s.model);
-      setGeminiModel(s.gemini_model);
-      setGeminiRequestsRemaining(s.gemini_requests_remaining);
-      setGeminiDailyLimit(s.gemini_daily_limit);
+      setLlmRequestsRemaining(s.llm_requests_remaining);
+      setLlmDailyLimit(s.llm_daily_limit);
+      setBackendUrl(s.backend_url || "");
       if (s.repo_path) {
         const parts = s.repo_path.replace(/\/+$/, "").split("/");
         setRepoName(parts[parts.length - 1] || null);
@@ -40,10 +40,8 @@ export function useSettings() {
 
   async function handleProviderChange(provider: LLMProvider) {
     setLlmProvider(provider);
-    const restoredModel = provider === "gemini" ? geminiModel : "";
-    setModelName(restoredModel);
     try {
-      await Promise.all([setProvider(provider), setModel(restoredModel)]);
+      await setProvider(provider);
     } catch {
       await fetchSettings();
     }
@@ -76,11 +74,11 @@ export function useSettings() {
   return {
     llmProvider,
     modelName,
-    geminiModel,
     maxContextFiles,
     repoName,
-    geminiRequestsRemaining,
-    geminiDailyLimit,
+    llmRequestsRemaining,
+    llmDailyLimit,
+    backendUrl,
     fetchSettings,
     handleProviderChange,
     handleModelInput,

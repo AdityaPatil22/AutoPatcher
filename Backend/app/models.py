@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 class LLMProviderEnum(str, Enum):
     """Supported LLM provider backends."""
     gemini = "gemini"
-    browser = "browser"
+    openai = "openai"
+    nvidia = "nvidia"
+    local_ollama = "local-ollama"
 
 
 

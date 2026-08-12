@@ -33,11 +33,10 @@ export default function InputPanel({
   const {
     llmProvider,
     modelName,
-    geminiModel,
     maxContextFiles,
     repoName,
-    geminiRequestsRemaining,
-    geminiDailyLimit,
+    llmRequestsRemaining,
+    llmDailyLimit,
     handleProviderChange,
     handleModelInput,
     handleMaxContextFilesChange,
@@ -163,9 +162,8 @@ export default function InputPanel({
           onChange={handleProviderChange}
           modelName={modelName}
           onModelChange={handleModelInput}
-          geminiRemaining={geminiRequestsRemaining}
-          geminiLimit={geminiDailyLimit}
-          geminiModel={geminiModel}
+          llmRequestsRemaining={llmRequestsRemaining}
+          llmDailyLimit={llmDailyLimit}
           isLoggedIn={isLoggedIn}
         />
 

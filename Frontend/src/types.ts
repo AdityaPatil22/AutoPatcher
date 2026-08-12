@@ -34,18 +34,18 @@ export interface User {
   has_repo_scope: boolean;
 }
 
-export type LLMProvider = "gemini" | "browser";
+export type LLMProvider = "gemini" | "openai" | "nvidia" | "local-ollama";
 
 export interface Settings {
   provider: LLMProvider;
   model: string;
-  gemini_model: string;
-  gemini_available: boolean;
+  api_key_set: boolean;
   max_context_files: number;
   repo_path: string | null;
   ollama_url: string;
-  gemini_requests_remaining: number;
-  gemini_daily_limit: number;
+  llm_requests_remaining: number;
+  llm_daily_limit: number;
+  backend_url: string;
 }
 
 export interface PromptOutput {

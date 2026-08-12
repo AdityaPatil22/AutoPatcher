@@ -10,7 +10,11 @@ from starlette.responses import JSONResponse, Response
 
 import app.config as config
 
-_GEMINI_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{35}")
+_API_KEY_PATTERNS = [
+    re.compile(r"AIza[0-9A-Za-z_-]{35}"),          # Gemini
+    re.compile(r"sk-[0-9A-Za-z_-]{20,}"),           # OpenAI
+    re.compile(r"nvapi-[0-9A-Za-z_-]{20,}"),        # NVIDIA NIM
+]
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -82,7 +86,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class APIKeyScrubMiddleware(BaseHTTPMiddleware):
-    """Defence-in-depth: scrub Gemini API keys from JSON error responses.
+    """Defence-in-depth: scrub API keys from JSON error responses.
 
     Only inspects API responses with 4xx/5xx status codes to keep the
     overhead near-zero for normal requests.
@@ -104,10 +108,11 @@ class APIKeyScrubMiddleware(BaseHTTPMiddleware):
 
         body_str = body.decode()
 
-        if config.GEMINI_API_KEY and config.GEMINI_API_KEY in body_str:
-            body_str = body_str.replace(config.GEMINI_API_KEY, "[REDACTED]")
+        if config.API_KEY and config.API_KEY in body_str:
+            body_str = body_str.replace(config.API_KEY, "[REDACTED]")
 
-        body_str = _GEMINI_KEY_PATTERN.sub("[REDACTED]", body_str)
+        for pattern in _API_KEY_PATTERNS:
+            body_str = pattern.sub("[REDACTED]", body_str)
 
         return Response(
             content=body_str,

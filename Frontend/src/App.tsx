@@ -18,11 +18,13 @@ export default function App() {
   const patchGen = usePatchGeneration({
     llmProvider: settings.llmProvider,
     modelName: settings.modelName,
-    onGeminiRequest: settings.fetchSettings,
+    onLlmRequest: settings.fetchSettings,
   });
 
   const [showIndexModal, setShowIndexModal] = useState(false);
   const [treeRefreshKey, setTreeRefreshKey] = useState(0);
+
+  const handleLogin = () => auth.login(settings.backendUrl);
 
   useEffect(() => {
     auth.checkAuth();
@@ -41,6 +43,7 @@ export default function App() {
         onOpenIndexModal={() => setShowIndexModal(true)}
         auth={auth}
         repoName={settings.repoName}
+        onLogin={handleLogin}
       />
 
       <main className="layout">
@@ -49,7 +52,7 @@ export default function App() {
           patchGen={patchGen}
           isLoggedIn={auth.isLoggedIn}
           isIndexed={indexState === "ready"}
-          onLogin={auth.login}
+          onLogin={handleLogin}
           onOpenIndexModal={() => setShowIndexModal(true)}
         />
 
@@ -70,7 +73,7 @@ export default function App() {
           hasRepoScope={auth.user?.has_repo_scope ?? false}
           isLoggedIn={auth.isLoggedIn}
           indexState={indexState}
-          onLogin={auth.login}
+          onLogin={handleLogin}
           onOpenIndexModal={() => setShowIndexModal(true)}
           repoName={settings.repoName}
         />

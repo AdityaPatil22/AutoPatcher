@@ -21,19 +21,32 @@ COOKIE_NAME = "autopatch_session"
 JWT_ALGORITHM = "HS256"
 
 
+def _callback_url() -> str:
+    return f"{config.BACKEND_URL.rstrip('/')}/api/auth/callback"
+
+
 @router.get("/auth/github")
 def github_login():
     """Redirect the user to GitHub's OAuth authorization page."""
     params = urlencode({
         "client_id": config.GITHUB_CLIENT_ID,
+        "redirect_uri": _callback_url(),
         "scope": "read:user user:email repo",
     })
     return RedirectResponse(url=f"{GITHUB_AUTHORIZE_URL}?{params}")
 
 
 @router.get("/auth/callback")
-def github_callback(code: str = Query(...), db: Session = Depends(get_db)):
+def github_callback(
+    code: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    error_description: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
     """Handle the OAuth callback: exchange code, fetch profile, upsert user, set session cookie."""
+    if error or not code:
+        detail = error_description or error or "GitHub OAuth failed: no authorization code received."
+        raise HTTPException(status_code=400, detail=detail)
     token_resp = httpx.post(
         GITHUB_TOKEN_URL,
         data={

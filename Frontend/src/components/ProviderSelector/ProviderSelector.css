@@ -33,20 +33,7 @@
   font-weight: 600;
 }
 
-.gemini-model-badge {
-  display: inline-block;
-  padding: 8px 14px;
-  background: var(--accent-bg);
-  border: 1px solid rgba(46, 94, 168, 0.2);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: -0.2px;
-}
-
-.gemini-quota {
+.llm-quota {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -60,12 +47,12 @@
   color: var(--green);
 }
 
-.gemini-quota-count {
+.llm-quota-count {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.gemini-quota-exhausted {
+.llm-quota-exhausted {
   background: var(--yellow-bg);
   border-color: rgba(212, 161, 94, 0.2);
   color: var(--yellow);

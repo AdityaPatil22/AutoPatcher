@@ -12,7 +12,7 @@ from app.models import (
 )
 from app.models_db import User
 from app.routes.auth import get_current_user_optional
-from app.routes.fix import GEMINI_DAILY_LIMIT
+from app.routes.fix import LLM_DAILY_LIMIT
 
 router = APIRouter(tags=["settings"])
 
@@ -20,28 +20,28 @@ router = APIRouter(tags=["settings"])
 @router.get("/settings")
 def get_settings(user: User | None = Depends(get_current_user_optional)):
     """Return current settings including provider and model."""
-    gemini_remaining = GEMINI_DAILY_LIMIT
+    llm_remaining = LLM_DAILY_LIMIT
     if user:
         today = datetime.now(timezone.utc).date()
-        used = user.gemini_requests_today if user.gemini_requests_date == today else 0
-        gemini_remaining = max(0, GEMINI_DAILY_LIMIT - used)
+        used = user.llm_requests_today if user.llm_requests_date == today else 0
+        llm_remaining = max(0, LLM_DAILY_LIMIT - used)
 
     return {
         "provider": config.LLM_PROVIDER,
         "model": config.LLM_MODEL,
-        "gemini_model": config.DEFAULT_LLM_MODEL,
-        "gemini_available": bool(config.GEMINI_API_KEY),
+        "api_key_set": bool(config.API_KEY),
         "max_context_files": config.MAX_CONTEXT_FILES,
         "repo_path": user.repo_path if user else None,
         "ollama_url": "http://localhost:11434",
-        "gemini_requests_remaining": gemini_remaining,
-        "gemini_daily_limit": GEMINI_DAILY_LIMIT,
+        "llm_requests_remaining": llm_remaining,
+        "llm_daily_limit": LLM_DAILY_LIMIT,
+        "backend_url": config.BACKEND_URL,
     }
 
 
 @router.put("/settings/provider")
 def set_provider(req: ProviderRequest):
-    """Update the LLM provider (local or gemini)."""
+    """Update the LLM provider."""
     config.LLM_PROVIDER = req.provider.value
     return {"provider": config.LLM_PROVIDER}
 

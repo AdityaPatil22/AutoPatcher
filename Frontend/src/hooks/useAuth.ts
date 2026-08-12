@@ -17,8 +17,9 @@ export function useAuth() {
     }
   }, []);
 
-  function login() {
-    window.location.href = "/api/auth/github";
+  function login(backendUrl?: string) {
+    const base = backendUrl || "";
+    window.location.href = `${base}/api/auth/github`;
   }
 
   async function logout() {

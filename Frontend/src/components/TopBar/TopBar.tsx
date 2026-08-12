@@ -10,6 +10,7 @@ interface TopBarProps {
   onOpenIndexModal: () => void;
   auth: UseAuthReturn;
   repoName: string | null;
+  onLogin: () => void;
 }
 
 export default function TopBar({
@@ -20,6 +21,7 @@ export default function TopBar({
   onOpenIndexModal,
   auth,
   repoName,
+  onLogin,
 }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -114,7 +116,7 @@ export default function TopBar({
         ) : (
           <button
             className="btn btn-github"
-            onClick={auth.login}
+            onClick={onLogin}
             type="button"
             disabled={auth.loading}
           >

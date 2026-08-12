@@ -2,34 +2,47 @@
 
 import json
 import re
+from collections.abc import Callable
 
 import app.config as config
 
 
 def _scrub_key(text: str) -> str:
-    """Remove the Gemini API key from any string to prevent accidental leakage."""
-    if config.GEMINI_API_KEY and config.GEMINI_API_KEY in text:
-        text = text.replace(config.GEMINI_API_KEY, "[REDACTED]")
+    """Remove the API key from any string to prevent accidental leakage."""
+    if config.API_KEY and config.API_KEY in text:
+        text = text.replace(config.API_KEY, "[REDACTED]")
     return re.sub(r"AIza[0-9A-Za-z_-]{35}", "[REDACTED]", text)
+
+
+_PROVIDER_DISPATCH: dict[str, Callable] = {}
 
 
 def call_llm(messages: list[dict]) -> dict:
     """Call the configured LLM provider and return parsed JSON response."""
+    provider = config.LLM_PROVIDER
+    handler = _PROVIDER_DISPATCH.get(provider)
+    if handler is None:
+        raise RuntimeError(f"Unknown LLM provider: {provider}")
+
     try:
-        raw = _call_gemini(messages)
+        raw = handler(messages)
     except Exception as exc:
         raise RuntimeError(_scrub_key(str(exc))) from None
 
     return _parse_response(raw)
 
 
+# ---------------------------------------------------------------------------
+# Provider: Gemini (Google genai SDK)
+# ---------------------------------------------------------------------------
+
 def _call_gemini(messages: list[dict]) -> str:
     """Send messages to the Google Gemini API using the google-genai SDK with thinking and search."""
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=config.GEMINI_API_KEY)
-    model = config.LLM_MODEL or "gemini-2.5-flash"
+    client = genai.Client(api_key=config.API_KEY)
+    model = config.LLM_MODEL
 
     system_parts = []
     contents = []
@@ -63,6 +76,68 @@ def _call_gemini(messages: list[dict]) -> str:
         config=generate_config,
     )
     return response.text
+
+
+# ---------------------------------------------------------------------------
+# Provider: OpenAI (standard OpenAI API)
+# ---------------------------------------------------------------------------
+
+def _call_openai(messages: list[dict]) -> str:
+    """Send messages to the OpenAI API."""
+    from openai import OpenAI
+
+    client = OpenAI(api_key=config.API_KEY)
+    return _openai_chat(client, messages)
+
+
+# ---------------------------------------------------------------------------
+# Provider: NVIDIA NIM (OpenAI-compatible with thinking extras)
+# ---------------------------------------------------------------------------
+
+def _call_nvidia(messages: list[dict]) -> str:
+    """Send messages to the NVIDIA NIM API via the OpenAI-compatible endpoint."""
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=config.API_KEY,
+    )
+    return _openai_chat(client, messages, extra_body={
+        "chat_template_kwargs": {"enable_thinking": True},
+        "reasoning_budget": 16384,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Shared helper for OpenAI-compatible providers
+# ---------------------------------------------------------------------------
+
+def _openai_chat(client, messages: list[dict], *, extra_body: dict | None = None) -> str:
+    """Shared chat completion call for any OpenAI-compatible client."""
+    oai_messages = []
+    for msg in messages:
+        role = msg["role"] if msg["role"] in ("system", "assistant", "user") else "user"
+        oai_messages.append({"role": role, "content": msg["content"]})
+
+    kwargs = {
+        "model": config.LLM_MODEL,
+        "messages": oai_messages,
+        "temperature": 1,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+    }
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
+    completion = client.chat.completions.create(**kwargs)
+    return completion.choices[0].message.content or ""
+
+
+_PROVIDER_DISPATCH.update({
+    "gemini": _call_gemini,
+    "openai": _call_openai,
+    "nvidia": _call_nvidia,
+})
 
 
 def _sanitize_code(code) -> str:

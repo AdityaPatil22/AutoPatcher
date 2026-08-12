@@ -18,7 +18,7 @@ from app.services.llm import call_llm, _parse_response
 from app.services.prompt import build_prompt, build_refine_prompt
 import app.config as config
 
-GEMINI_DAILY_LIMIT = 5
+LLM_DAILY_LIMIT = config.LLM_DAILY_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -61,24 +61,24 @@ def _flatten_messages(messages: list[dict]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Per-user daily Gemini usage limiting
+# Per-user daily LLM usage limiting
 # ---------------------------------------------------------------------------
 
-def _check_gemini_limit(user: User, db: Session) -> None:
+def _check_llm_limit(user: User, db: Session) -> None:
     today = datetime.now(timezone.utc).date()
-    if user.gemini_requests_date != today:
-        user.gemini_requests_today = 0
-        user.gemini_requests_date = today
+    if user.llm_requests_date != today:
+        user.llm_requests_today = 0
+        user.llm_requests_date = today
         db.commit()
-    if user.gemini_requests_today >= GEMINI_DAILY_LIMIT:
+    if user.llm_requests_today >= LLM_DAILY_LIMIT:
         raise HTTPException(
             status_code=429,
-            detail=f"Daily Gemini limit reached ({GEMINI_DAILY_LIMIT}/day). Try again tomorrow or use Local (Ollama).",
+            detail=f"Daily LLM request limit reached ({LLM_DAILY_LIMIT}/day). Try again tomorrow or use Local (Ollama).",
         )
 
 
-def _increment_gemini_usage(user: User, db: Session) -> None:
-    user.gemini_requests_today += 1
+def _increment_llm_usage(user: User, db: Session) -> None:
+    user.llm_requests_today += 1
     db.commit()
 
 
@@ -89,7 +89,7 @@ def _increment_gemini_usage(user: User, db: Session) -> None:
 @router.post("/generate-fix", response_model=PatchOutput)
 def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate code patches for a bug described in the ticket."""
-    _check_gemini_limit(_user, db)
+    _check_llm_limit(_user, db)
 
     contexts = get_top_contexts(
         ticket.description, ticket.file_hint,
@@ -111,7 +111,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
 
-    _increment_gemini_usage(_user, db)
+    _increment_llm_usage(_user, db)
     logger.info("LLM result keys: %s", list(llm_result.keys()))
 
     explanation = llm_result.get("explanation", "No explanation provided.")
@@ -127,7 +127,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
 @router.post("/refine-fix", response_model=PatchOutput)
 def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Refine a previous fix based on user feedback."""
-    _check_gemini_limit(_user, db)
+    _check_llm_limit(_user, db)
 
     contexts = get_top_contexts(
         refine.description, refine.file_hint,
@@ -156,7 +156,7 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
 
-    _increment_gemini_usage(_user, db)
+    _increment_llm_usage(_user, db)
     explanation = llm_result.get("explanation", "No explanation provided.")
     patches = build_patches(llm_result, contexts)
 
