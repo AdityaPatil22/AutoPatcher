@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 
 from cryptography.fernet import Fernet
-from sqlalchemy import BigInteger, Date, DateTime, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 import app.config as config
@@ -28,6 +28,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     access_token_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    has_repo_scope: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     repo_path: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     github_repo_owner: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     github_repo_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)

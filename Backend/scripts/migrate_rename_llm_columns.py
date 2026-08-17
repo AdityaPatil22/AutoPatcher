@@ -1,12 +1,15 @@
 """One-shot migration: rename gemini_requests_* columns to llm_requests_*.
 
 Run once against your database:
-    python migrate_rename_llm_columns.py
+    python3 scripts/migrate_rename_llm_columns.py
 
 Safe to re-run — it checks whether the old columns still exist before renaming.
 """
 
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import inspect, text
 

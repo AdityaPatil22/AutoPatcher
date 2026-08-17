@@ -75,12 +75,15 @@ def github_callback(
     username = profile.get("login", "")
     email = profile.get("email")
     avatar_url = profile.get("avatar_url", "")
+    granted_scopes = {s.strip() for s in user_resp.headers.get("X-OAuth-Scopes", "").split(",") if s.strip()}
+    has_repo_scope = "repo" in granted_scopes
 
     user = db.query(User).filter(User.github_id == github_id).first()
     if user:
         user.username = username
         user.email = email
         user.avatar_url = avatar_url
+        user.has_repo_scope = has_repo_scope
         user.set_access_token(access_token)
     else:
         user = User(
@@ -88,6 +91,7 @@ def github_callback(
             username=username,
             email=email,
             avatar_url=avatar_url,
+            has_repo_scope=has_repo_scope,
         )
         user.set_access_token(access_token)
         db.add(user)
@@ -146,37 +150,15 @@ def get_current_user_optional(
     return db.query(User).filter(User.github_id == payload["github_id"]).first()
 
 
-def _check_token_scopes(token: str) -> set[str]:
-    """Probe the token's granted scopes via the GitHub API response header."""
-    try:
-        resp = httpx.get(
-            GITHUB_USER_URL,
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-            timeout=5,
-        )
-        raw = resp.headers.get("X-OAuth-Scopes", "")
-        return {s.strip() for s in raw.split(",") if s.strip()}
-    except Exception:
-        return set()
-
-
 @router.get("/auth/me")
 def get_me(user: User = Depends(get_current_user)):
     """Return the currently authenticated user's profile, including token scope status."""
-    has_repo_scope = False
-    try:
-        token = user.get_access_token()
-        scopes = _check_token_scopes(token)
-        has_repo_scope = "repo" in scopes
-    except Exception:
-        pass
-
     return {
         "github_id": user.github_id,
         "username": user.username,
         "email": user.email,
         "avatar_url": user.avatar_url,
-        "has_repo_scope": has_repo_scope,
+        "has_repo_scope": user.has_repo_scope,
     }
 
 

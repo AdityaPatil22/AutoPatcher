@@ -1,12 +1,15 @@
 """One-shot migration: add per-user LLM settings columns to the users table.
 
 Run once against your database:
-    python migrate_add_user_llm_settings.py
+    python3 scripts/migrate_add_user_llm_settings.py
 
 Safe to re-run — it checks whether each column already exists before adding it.
 """
 
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import inspect, text
 
