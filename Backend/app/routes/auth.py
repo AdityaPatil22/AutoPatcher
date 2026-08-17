@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
+import time
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -100,7 +101,7 @@ def github_callback(
     db.refresh(user)
 
     session_token = jwt.encode(
-        {"github_id": github_id, "username": username},
+        {"github_id": github_id, "username": username, "exp": time.time() + 60 * 60 * 24 * 7},
         config.JWT_SECRET,
         algorithm=JWT_ALGORITHM,
     )
