@@ -25,6 +25,13 @@ router = APIRouter(tags=["index"])
 _GITHUB_URL_RE = re.compile(r"^https://github\.com/[\w.\-]+/[\w.\-]+/?$")
 
 
+def _remove_user_clone_dir(user_id: int) -> None:
+    """Delete all cloned repo files for a user from CLONE_DIR."""
+    user_clone_dir = config.CLONE_DIR / str(user_id)
+    if user_clone_dir.exists():
+        shutil.rmtree(user_clone_dir)
+
+
 def _clone_github_repo(github_url: str, user_id: int) -> Path:
     """Clone a public GitHub repo (shallow) into a per-user subdirectory of CLONE_DIR."""
     url = github_url.rstrip("/")
@@ -34,12 +41,13 @@ def _clone_github_repo(github_url: str, user_id: int) -> Path:
     parts = url.rstrip("/").split("/")
     repo_name = parts[-1]
 
+    # Wipe any previously cloned repo(s) for this user, not just a same-named one.
+    _remove_user_clone_dir(user_id)
+
     user_clone_dir = config.CLONE_DIR / str(user_id)
     user_clone_dir.mkdir(parents=True, exist_ok=True)
 
     target = user_clone_dir / repo_name
-    if target.exists():
-        shutil.rmtree(target)
 
     try:
         subprocess.run(
@@ -86,8 +94,9 @@ def delete_index(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Clear the user's indexed repository from ChromaDB and reset repo metadata."""
+    """Clear the user's indexed repository from ChromaDB, disk, and reset repo metadata."""
     clear_index(user.id)
+    _remove_user_clone_dir(user.id)
     user.repo_path = None
     user.github_repo_owner = None
     user.github_repo_name = None
