@@ -33,6 +33,9 @@ class User(Base):
     github_repo_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     llm_requests_today: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     llm_requests_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    llm_provider: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    llm_model: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    max_context_files: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

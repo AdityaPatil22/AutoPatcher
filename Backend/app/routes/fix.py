@@ -108,6 +108,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
 
     contexts = get_top_contexts(
         ticket.description, ticket.file_hint,
+        max_files=_user.max_context_files,
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
@@ -116,7 +117,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
     messages = build_prompt(ticket.model_dump(), contexts)
 
     try:
-        llm_result = call_llm(messages)
+        llm_result = call_llm(messages, provider=_user.llm_provider, model=_user.llm_model)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
@@ -142,6 +143,7 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
 
     contexts = get_top_contexts(
         refine.description, refine.file_hint,
+        max_files=_user.max_context_files,
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
@@ -157,7 +159,7 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
     )
 
     try:
-        llm_result = call_llm(messages)
+        llm_result = call_llm(messages, provider=_user.llm_provider, model=_user.llm_model)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
@@ -187,6 +189,7 @@ def generate_prompt(ticket: TicketInput, _user: User = Depends(get_current_user)
     """
     contexts = get_top_contexts(
         ticket.description, ticket.file_hint,
+        max_files=_user.max_context_files,
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
@@ -194,7 +197,7 @@ def generate_prompt(ticket: TicketInput, _user: User = Depends(get_current_user)
 
     messages = build_prompt(ticket.model_dump(), contexts)
     session_id = _store_session(contexts, ticket.title)
-    model_hint = config.LLM_MODEL or "gemini-2.5-flash"
+    model_hint = _user.llm_model or config.LLM_MODEL or "gemini-2.5-flash"
 
     return PromptOutput(
         session_id=session_id,
@@ -209,6 +212,7 @@ def refine_prompt(refine: RefineInput, _user: User = Depends(get_current_user)):
     """Prepare a refinement prompt without calling the LLM."""
     contexts = get_top_contexts(
         refine.description, refine.file_hint,
+        max_files=_user.max_context_files,
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
@@ -224,7 +228,7 @@ def refine_prompt(refine: RefineInput, _user: User = Depends(get_current_user)):
     )
 
     session_id = _store_session(contexts, refine.title)
-    model_hint = config.LLM_MODEL or "gemini-2.5-flash"
+    model_hint = _user.llm_model or config.LLM_MODEL or "gemini-2.5-flash"
 
     return PromptOutput(
         session_id=session_id,

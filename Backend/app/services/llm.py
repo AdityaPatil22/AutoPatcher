@@ -17,15 +17,15 @@ def _scrub_key(text: str) -> str:
 _PROVIDER_DISPATCH: dict[str, Callable] = {}
 
 
-def call_llm(messages: list[dict]) -> dict:
-    """Call the configured LLM provider and return parsed JSON response."""
-    provider = config.LLM_PROVIDER
+def call_llm(messages: list[dict], provider: str | None = None, model: str | None = None) -> dict:
+    """Call the given (or configured default) LLM provider and return parsed JSON response."""
+    provider = provider or config.LLM_PROVIDER
     handler = _PROVIDER_DISPATCH.get(provider)
     if handler is None:
         raise RuntimeError(f"Unknown LLM provider: {provider}")
 
     try:
-        raw = handler(messages)
+        raw = handler(messages, model or config.LLM_MODEL)
     except Exception as exc:
         raise RuntimeError(_scrub_key(str(exc))) from None
 
@@ -36,13 +36,12 @@ def call_llm(messages: list[dict]) -> dict:
 # Provider: Gemini (Google genai SDK)
 # ---------------------------------------------------------------------------
 
-def _call_gemini(messages: list[dict]) -> str:
+def _call_gemini(messages: list[dict], model: str) -> str:
     """Send messages to the Google Gemini API using the google-genai SDK with thinking and search."""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=config.API_KEY)
-    model = config.LLM_MODEL
 
     system_parts = []
     contents = []
@@ -82,19 +81,19 @@ def _call_gemini(messages: list[dict]) -> str:
 # Provider: OpenAI (standard OpenAI API)
 # ---------------------------------------------------------------------------
 
-def _call_openai(messages: list[dict]) -> str:
+def _call_openai(messages: list[dict], model: str) -> str:
     """Send messages to the OpenAI API."""
     from openai import OpenAI
 
     client = OpenAI(api_key=config.API_KEY)
-    return _openai_chat(client, messages)
+    return _openai_chat(client, messages, model)
 
 
 # ---------------------------------------------------------------------------
 # Provider: NVIDIA NIM (OpenAI-compatible with thinking extras)
 # ---------------------------------------------------------------------------
 
-def _call_nvidia(messages: list[dict]) -> str:
+def _call_nvidia(messages: list[dict], model: str) -> str:
     """Send messages to the NVIDIA NIM API via the OpenAI-compatible endpoint."""
     from openai import OpenAI
 
@@ -102,7 +101,7 @@ def _call_nvidia(messages: list[dict]) -> str:
         base_url="https://integrate.api.nvidia.com/v1",
         api_key=config.API_KEY,
     )
-    return _openai_chat(client, messages, extra_body={
+    return _openai_chat(client, messages, model, extra_body={
         "chat_template_kwargs": {"enable_thinking": True},
         "reasoning_budget": 16384,
     })
@@ -112,7 +111,7 @@ def _call_nvidia(messages: list[dict]) -> str:
 # Shared helper for OpenAI-compatible providers
 # ---------------------------------------------------------------------------
 
-def _openai_chat(client, messages: list[dict], *, extra_body: dict | None = None) -> str:
+def _openai_chat(client, messages: list[dict], model: str, *, extra_body: dict | None = None) -> str:
     """Shared chat completion call for any OpenAI-compatible client."""
     oai_messages = []
     for msg in messages:
@@ -120,7 +119,7 @@ def _openai_chat(client, messages: list[dict], *, extra_body: dict | None = None
         oai_messages.append({"role": role, "content": msg["content"]})
 
     kwargs = {
-        "model": config.LLM_MODEL,
+        "model": model,
         "messages": oai_messages,
         "temperature": 1,
         "top_p": 0.95,
