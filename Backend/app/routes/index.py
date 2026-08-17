@@ -32,33 +32,51 @@ def _remove_user_clone_dir(user_id: int) -> None:
         shutil.rmtree(user_clone_dir)
 
 
-def _clone_github_repo(github_url: str, user_id: int) -> Path:
-    """Clone a public GitHub repo (shallow) into a per-user subdirectory of CLONE_DIR."""
+def _clone_github_repo(github_url: str, user: User) -> Path:
+    """Clone a GitHub repo (shallow) into a per-user subdirectory of CLONE_DIR.
+
+    Uses the user's OAuth token so private repositories are accessible when the
+    token has repo scope.
+    """
     url = github_url.rstrip("/")
     if not _GITHUB_URL_RE.match(url):
         raise HTTPException(status_code=400, detail="Invalid GitHub URL. Expected https://github.com/owner/repo")
 
     parts = url.rstrip("/").split("/")
-    repo_name = parts[-1]
+    owner, repo_name = parts[-2], parts[-1]
+
+    try:
+        token = user.get_access_token()
+    except Exception:
+        raise HTTPException(status_code=401, detail="Could not decrypt access token. Please log in again.")
 
     # Wipe any previously cloned repo(s) for this user, not just a same-named one.
-    _remove_user_clone_dir(user_id)
+    _remove_user_clone_dir(user.id)
 
-    user_clone_dir = config.CLONE_DIR / str(user_id)
+    user_clone_dir = config.CLONE_DIR / str(user.id)
     user_clone_dir.mkdir(parents=True, exist_ok=True)
 
     target = user_clone_dir / repo_name
+    auth_url = f"https://x-access-token:{token}@github.com/{owner}/{repo_name}.git"
 
     try:
         subprocess.run(
-            ["git", "clone", "--depth", "1", f"{url}.git", str(target)],
+            ["git", "clone", "--depth", "1", auth_url, str(target)],
             check=True,
             capture_output=True,
             text=True,
             timeout=120,
         )
     except subprocess.CalledProcessError as e:
-        logger.error("git clone failed: %s", e.stderr)
+        logger.error("git clone failed for %s/%s: %s", owner, repo_name, e.stderr)
+        if not user.has_repo_scope:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Failed to clone repository. Your GitHub token does not have repo scope. "
+                    "Log out and log in again to grant access to private repositories."
+                ),
+            )
         raise HTTPException(status_code=400, detail=f"Failed to clone repository: {e.stderr.strip()}")
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="Clone timed out. The repository may be too large.")
@@ -73,7 +91,7 @@ def index_repo(
     db: Session = Depends(get_db),
 ):
     """Index a repository from a GitHub URL."""
-    repo = _clone_github_repo(req.github_url, user.id)
+    repo = _clone_github_repo(req.github_url, user)
     parts = req.github_url.rstrip("/").split("/")
     user.github_repo_owner = parts[-2]
     user.github_repo_name = parts[-1]
