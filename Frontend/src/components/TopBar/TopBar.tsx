@@ -3,7 +3,7 @@ import type { UseAuthReturn } from "../../hooks/useAuth";
 import "./TopBar.css";
 
 interface TopBarProps {
-  indexState: "checking" | "ready" | "empty" | "error";
+  indexState: "checking" | "ready" | "empty" | "stale" | "error";
   indexStatusText: string;
   theme: "dark" | "light";
   toggleTheme: () => void;
@@ -47,7 +47,13 @@ export default function TopBar({
           className={`index-status ${indexState}`}
           onClick={onOpenIndexModal}
           type="button"
-          title={indexState === "ready" ? "Change indexed repository" : "Index a repository"}
+          title={
+            indexState === "ready"
+              ? "Change indexed repository"
+              : indexState === "stale"
+                ? "Index stale — re-index your repository"
+                : "Index a repository"
+          }
         >
           <span className="status-dot" />
           <span>

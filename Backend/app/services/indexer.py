@@ -180,13 +180,26 @@ def is_indexed(user_id: int) -> bool:
         return False
 
 
+def is_index_stale(user_id: int) -> bool:
+    """Return True when Chroma has indexed paths but none exist on disk."""
+    paths = get_indexed_files(user_id)
+    if not paths:
+        return False
+    return not any(Path(p).exists() for p in paths)
+
+
 def get_index_stats(user_id: int) -> dict:
     """Return index status and total chunk count for this user."""
     try:
         collection = _get_collection(user_id)
-        return {"indexed": collection.count() > 0, "total_chunks": collection.count()}
+        indexed = collection.count() > 0
+        return {
+            "indexed": indexed,
+            "total_chunks": collection.count(),
+            "stale": is_index_stale(user_id) if indexed else False,
+        }
     except Exception:
-        return {"indexed": False, "total_chunks": 0}
+        return {"indexed": False, "total_chunks": 0, "stale": False}
 
 
 def get_indexed_files(user_id: int) -> list[str]:

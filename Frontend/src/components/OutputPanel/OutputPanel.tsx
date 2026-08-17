@@ -24,7 +24,7 @@ interface OutputPanelProps {
   handleRefineFix: () => void;
   hasRepoScope: boolean;
   isLoggedIn: boolean;
-  indexState: "checking" | "ready" | "empty" | "error";
+  indexState: "checking" | "ready" | "empty" | "stale" | "error";
   onLogin: () => void;
   onOpenIndexModal: () => void;
   repoName: string | null;

@@ -14,6 +14,7 @@ from app.models_db import User
 from app.routes.auth import get_current_user
 from app.services.context import get_top_contexts
 from app.services.fix_builder import build_patches
+from app.services.indexer import is_index_stale
 from app.services.llm import call_llm, _parse_response
 from app.services.prompt import build_prompt, build_refine_prompt
 import app.config as config
@@ -82,6 +83,20 @@ def _increment_llm_usage(user: User, db: Session) -> None:
     db.commit()
 
 
+def _raise_if_no_contexts(contexts: list, user_id: int) -> None:
+    if contexts:
+        return
+    if is_index_stale(user_id):
+        raise HTTPException(
+            status_code=410,
+            detail="Index stale — indexed files are no longer on disk. Please re-index your repository.",
+        )
+    raise HTTPException(
+        status_code=404,
+        detail="Could not find relevant source code for this bug description.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Standard flow (backend calls the LLM)
 # ---------------------------------------------------------------------------
@@ -96,11 +111,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
-    if not contexts:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not find relevant source code for this bug description.",
-        )
+    _raise_if_no_contexts(contexts, _user.id)
 
     messages = build_prompt(ticket.model_dump(), contexts)
 
@@ -134,11 +145,7 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
-    if not contexts:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not find relevant source code for this bug description.",
-        )
+    _raise_if_no_contexts(contexts, _user.id)
 
     previous_patches = [p.model_dump() for p in refine.previous_patches]
 
@@ -183,11 +190,7 @@ def generate_prompt(ticket: TicketInput, _user: User = Depends(get_current_user)
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
-    if not contexts:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not find relevant source code for this bug description.",
-        )
+    _raise_if_no_contexts(contexts, _user.id)
 
     messages = build_prompt(ticket.model_dump(), contexts)
     session_id = _store_session(contexts, ticket.title)
@@ -209,11 +212,7 @@ def refine_prompt(refine: RefineInput, _user: User = Depends(get_current_user)):
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
-    if not contexts:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not find relevant source code for this bug description.",
-        )
+    _raise_if_no_contexts(contexts, _user.id)
 
     previous_patches = [p.model_dump() for p in refine.previous_patches]
 

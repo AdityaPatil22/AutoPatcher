@@ -73,6 +73,10 @@
   background: var(--yellow);
 }
 
+.index-status.stale .status-dot {
+  background: var(--red);
+}
+
 .index-status.error .status-dot {
   background: var(--red);
 }

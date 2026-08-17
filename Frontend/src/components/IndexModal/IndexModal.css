@@ -79,15 +79,6 @@
   position: relative;
 }
 
-.input-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-  pointer-events: none;
-}
-
 
 .modal-actions {
   display: flex;

@@ -63,6 +63,7 @@ export interface BuildPatchesRequest {
 export interface IndexStatus {
   indexed: boolean;
   total_chunks: number;
+  stale: boolean;
 }
 
 export interface FileNode {
