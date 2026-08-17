@@ -266,7 +266,7 @@ def refine_prompt(refine: RefineInput, _user: User = Depends(get_current_user)):
 
 
 @router.post("/build-patches", response_model=PatchOutput)
-def build_patches_from_raw(req: BuildPatchesRequest):
+def build_patches_from_raw(req: BuildPatchesRequest, _user: User = Depends(get_current_user)):
     """Parse raw LLM output (from the user's local Ollama) into structured patches."""
     session = _get_session(req.session_id)
 
