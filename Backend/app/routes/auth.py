@@ -106,6 +106,7 @@ def github_callback(
         key=COOKIE_NAME,
         value=session_token,
         httponly=True,
+        secure=not config.FRONTEND_URL.startswith("http://"),
         samesite="lax",
         max_age=60 * 60 * 24 * 7,
         path="/",
