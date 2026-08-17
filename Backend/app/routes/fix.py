@@ -6,6 +6,7 @@ import uuid
 from datetime import date, timezone, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -65,22 +66,42 @@ def _flatten_messages(messages: list[dict]) -> str:
 # Per-user daily LLM usage limiting
 # ---------------------------------------------------------------------------
 
-def _check_llm_limit(user: User, db: Session) -> None:
+def _reserve_llm_slot(user: User, db: Session) -> None:
+    """Atomically reset-if-new-day and increment the daily usage counter, raising 429 if the limit is reached.
+
+    A single conditional UPDATE avoids the check-then-increment race that lets concurrent
+    requests all pass the limit check before any of them commits an increment.
+    """
     today = datetime.now(timezone.utc).date()
-    if user.llm_requests_date != today:
-        user.llm_requests_today = 0
-        user.llm_requests_date = today
-        db.commit()
-    if user.llm_requests_today >= LLM_DAILY_LIMIT:
+    result = db.execute(
+        text(
+            """
+            UPDATE users
+            SET llm_requests_today = CASE WHEN llm_requests_date = :today THEN llm_requests_today + 1 ELSE 1 END,
+                llm_requests_date = :today
+            WHERE id = :user_id
+              AND (llm_requests_date IS DISTINCT FROM :today OR llm_requests_today < :limit)
+            """
+        ),
+        {"today": today, "user_id": user.id, "limit": LLM_DAILY_LIMIT},
+    )
+    db.commit()
+    if result.rowcount == 0:
         raise HTTPException(
             status_code=429,
             detail=f"Daily LLM request limit reached ({LLM_DAILY_LIMIT}/day). Try again tomorrow or use Local (Ollama).",
         )
+    db.refresh(user)
 
 
-def _increment_llm_usage(user: User, db: Session) -> None:
-    user.llm_requests_today += 1
+def _release_llm_slot(user: User, db: Session) -> None:
+    """Give back a reserved usage slot after a failed LLM call, so failures don't burn the daily quota."""
+    db.execute(
+        text("UPDATE users SET llm_requests_today = llm_requests_today - 1 WHERE id = :user_id AND llm_requests_today > 0"),
+        {"user_id": user.id},
+    )
     db.commit()
+    db.refresh(user)
 
 
 def _raise_if_no_contexts(contexts: list, user_id: int) -> None:
@@ -104,7 +125,7 @@ def _raise_if_no_contexts(contexts: list, user_id: int) -> None:
 @router.post("/generate-fix", response_model=PatchOutput)
 def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate code patches for a bug described in the ticket."""
-    _check_llm_limit(_user, db)
+    _reserve_llm_slot(_user, db)
 
     contexts = get_top_contexts(
         ticket.description, ticket.file_hint,
@@ -112,6 +133,8 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
+    if not contexts:
+        _release_llm_slot(_user, db)
     _raise_if_no_contexts(contexts, _user.id)
 
     messages = build_prompt(ticket.model_dump(), contexts)
@@ -119,11 +142,12 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
     try:
         llm_result = call_llm(messages, provider=_user.llm_provider, model=_user.llm_model)
     except RuntimeError as e:
+        _release_llm_slot(_user, db)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        _release_llm_slot(_user, db)
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
 
-    _increment_llm_usage(_user, db)
     logger.info("LLM result keys: %s", list(llm_result.keys()))
 
     explanation = llm_result.get("explanation", "No explanation provided.")
@@ -139,7 +163,7 @@ def generate_fix(ticket: TicketInput, _user: User = Depends(get_current_user), d
 @router.post("/refine-fix", response_model=PatchOutput)
 def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Refine a previous fix based on user feedback."""
-    _check_llm_limit(_user, db)
+    _reserve_llm_slot(_user, db)
 
     contexts = get_top_contexts(
         refine.description, refine.file_hint,
@@ -147,6 +171,8 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
         user_id=_user.id, repo_path=_user.repo_path,
     )
 
+    if not contexts:
+        _release_llm_slot(_user, db)
     _raise_if_no_contexts(contexts, _user.id)
 
     previous_patches = [p.model_dump() for p in refine.previous_patches]
@@ -161,11 +187,12 @@ def refine_fix(refine: RefineInput, _user: User = Depends(get_current_user), db:
     try:
         llm_result = call_llm(messages, provider=_user.llm_provider, model=_user.llm_model)
     except RuntimeError as e:
+        _release_llm_slot(_user, db)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        _release_llm_slot(_user, db)
         raise HTTPException(status_code=502, detail=f"LLM call failed: {e}")
 
-    _increment_llm_usage(_user, db)
     explanation = llm_result.get("explanation", "No explanation provided.")
     patches = build_patches(llm_result, contexts)
 
