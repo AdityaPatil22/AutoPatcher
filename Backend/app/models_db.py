@@ -15,7 +15,7 @@ _fernet = None
 def _get_fernet() -> Fernet:
     global _fernet
     if _fernet is None:
-        _fernet = Fernet(config.SECRET_KEY.encode())
+        _fernet = Fernet(config.FERNET_KEY.encode())
     return _fernet
 
 

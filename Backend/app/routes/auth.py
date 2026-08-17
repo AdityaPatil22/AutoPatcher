@@ -97,7 +97,7 @@ def github_callback(
 
     session_token = jwt.encode(
         {"github_id": github_id, "username": username},
-        config.SECRET_KEY,
+        config.JWT_SECRET,
         algorithm=JWT_ALGORITHM,
     )
 
@@ -121,7 +121,7 @@ def get_current_user(
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        payload = jwt.decode(session, config.SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(session, config.JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid session")
 
@@ -139,7 +139,7 @@ def get_current_user_optional(
     if not session:
         return None
     try:
-        payload = jwt.decode(session, config.SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(session, config.JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.InvalidTokenError:
         return None
     return db.query(User).filter(User.github_id == payload["github_id"]).first()

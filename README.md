@@ -236,7 +236,8 @@ Copy `Backend/.env.example` to `Backend/.env` and configure:
 |----------|---------|-------------|
 | `GITHUB_CLIENT_ID` | — | OAuth App client ID |
 | `GITHUB_CLIENT_SECRET` | — | OAuth App client secret |
-| `SECRET_KEY` | — | Fernet key for encrypting tokens (generate below) |
+| `JWT_SECRET` | — | Json Web Token Secret |
+| `FERNET_KEY` | — | Fernet key for encrypting tokens (generate below) |
 | `FRONTEND_URL` | `http://localhost:5173` | Redirect URL after OAuth callback |
 
 Generate a Fernet key:
