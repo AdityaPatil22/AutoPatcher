@@ -31,7 +31,10 @@ def search_files(query: str, file_hint: str | None = None, *, repo_path: str | N
             if file_hint and file_hint.lower() not in filename.lower():
                 continue
 
-            content = filepath.read_text(encoding="utf-8")
+            try:
+                content = filepath.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, PermissionError):
+                continue
             score = score_relevance(content, keywords, str(filepath), file_refs)
 
             if score > 0:
